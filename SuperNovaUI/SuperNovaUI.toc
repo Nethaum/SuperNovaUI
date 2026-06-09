@@ -2,7 +2,7 @@
 ## Title: |cff38bdf8SuperNovaUI|r
 ## Notes: A modular World of Warcraft Retail UI suite.
 ## Author: Nethaum + Codex
-## Version: 0.1.0
+## Version: 0.1.1
 ## IconTexture: Interface\Icons\INV_Misc_EngGizmos_27
 ## Category-enUS: UI Overhaul
 ## Category-ptBR: Interface
