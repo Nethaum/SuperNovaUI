@@ -42,7 +42,17 @@ function SN:SetFrameMoverLocked(locked)
     end
 
     settings.locked = locked
-    self:Print(locked and "FrameMover locked." or "FrameMover unlocked.")
+
+    local frameMover = self:GetModule("frameMover")
+    if locked and frameMover and frameMover.StopAllMoving then
+        frameMover:StopAllMoving()
+    end
+
+    if locked then
+        self:Print("FrameMover locked. Movement and scaling are disabled.")
+    else
+        self:Print("FrameMover unlocked. Hold SHIFT to move frames or CTRL + mousewheel to scale.")
+    end
 end
 
 function SN:HandleSlashCommand(message)
