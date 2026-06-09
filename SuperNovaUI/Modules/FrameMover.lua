@@ -2,6 +2,21 @@ local addonName, SN = ...
 
 local FrameMover = {
     attachedFrames = {},
+    attachedInputs = {},
+    attachedWheels = {},
+    dragHandles = {},
+    movingFrames = {},
+}
+
+local DEFAULT_DRAG_HEIGHT = 56
+
+local FRAME_PROFILES = {
+    WorldMapFrame = {
+        dragHeight = 72,
+        wheelTargets = {
+            "WorldMapFrame.ScrollContainer",
+        },
+    },
 }
 
 local function Clamp(value, minValue, maxValue)
@@ -30,6 +45,20 @@ local function IsModifierDown(modifier)
     return false
 end
 
+local function ResolveFramePath(framePath)
+    local currentFrame
+
+    for segment in string.gmatch(framePath or "", "[^%.]+") do
+        currentFrame = currentFrame and currentFrame[segment] or _G[segment]
+
+        if not currentFrame then
+            return nil
+        end
+    end
+
+    return currentFrame
+end
+
 local function IsSafeFrame(frame)
     if not frame then
         return false
@@ -40,6 +69,18 @@ local function IsSafeFrame(frame)
     end
 
     return frame.SetMovable and frame.RegisterForDrag and frame.StartMoving and frame.StopMovingOrSizing
+end
+
+local function CanReceiveInput(frame)
+    if not frame then
+        return false
+    end
+
+    if frame.IsForbidden and frame:IsForbidden() then
+        return false
+    end
+
+    return frame.HookScript and frame.EnableMouse
 end
 
 function FrameMover:GetSettings()
@@ -101,28 +142,49 @@ end
 
 function FrameMover:StartMoving(frame, frameName)
     if not self:IsInteractionAllowed() then
-        return
+        return false
     end
 
     if not IsSafeFrame(frame) then
-        return
+        return false
     end
 
-    frame:StartMoving()
+    frame:SetMovable(true)
+
+    local ok = pcall(frame.StartMoving, frame)
+    if not ok then
+        return false
+    end
+
+    self.movingFrames[frameName] = frame
+    return true
 end
 
 function FrameMover:StopMoving(frame, frameName)
-    if not IsSafeFrame(frame) then
+    local movingFrame = self.movingFrames[frameName]
+    if not movingFrame then
         return
     end
 
-    frame:StopMovingOrSizing()
-    self:SavePlacement(frame, frameName)
+    self.movingFrames[frameName] = nil
+
+    if not IsSafeFrame(movingFrame) then
+        return
+    end
+
+    pcall(movingFrame.StopMovingOrSizing, movingFrame)
+    self:SavePlacement(movingFrame, frameName)
+end
+
+function FrameMover:StopAllMoving()
+    for frameName, frame in pairs(self.movingFrames) do
+        self:StopMoving(frame, frameName)
+    end
 end
 
 function FrameMover:ScaleFrame(frame, frameName, delta)
     local settings = self:GetSettings()
-    if not settings or not settings.allowScaling then
+    if not settings or settings.locked or not settings.allowScaling then
         return
     end
 
@@ -134,6 +196,10 @@ function FrameMover:ScaleFrame(frame, frameName, delta)
         return
     end
 
+    if not IsSafeFrame(frame) then
+        return
+    end
+
     local currentScale = frame:GetScale() or 1
     local step = settings.scaleStep or 0.05
     local nextScale = Clamp(currentScale + (delta * step), settings.minScale or 0.7, settings.maxScale or 1.8)
@@ -142,36 +208,134 @@ function FrameMover:ScaleFrame(frame, frameName, delta)
     self:SavePlacement(frame, frameName)
 end
 
-function FrameMover:ConfigureFrame(frame, frameName)
-    if self.attachedFrames[frameName] or not IsSafeFrame(frame) then
+function FrameMover:AttachInputHandlers(inputFrame, targetFrame, frameName, options)
+    if not CanReceiveInput(inputFrame) or not IsSafeFrame(targetFrame) then
         return
     end
 
-    frame:SetMovable(true)
-    frame:SetClampedToScreen(true)
-    frame:RegisterForDrag("LeftButton")
-
-    if frame.SetDontSavePosition then
-        frame:SetDontSavePosition(true)
+    local inputKey = tostring(inputFrame) .. ":" .. frameName
+    if self.attachedInputs[inputKey] then
+        return
     end
 
-    frame:HookScript("OnDragStart", function(targetFrame)
-        FrameMover:StartMoving(targetFrame, frameName)
+    options = options or {}
+
+    if not options.preserveMouseState then
+        inputFrame:EnableMouse(true)
+    end
+
+    inputFrame:HookScript("OnMouseDown", function(_, button)
+        if button == "LeftButton" then
+            FrameMover:StartMoving(targetFrame, frameName)
+        end
     end)
 
-    frame:HookScript("OnDragStop", function(targetFrame)
+    inputFrame:HookScript("OnMouseUp", function()
         FrameMover:StopMoving(targetFrame, frameName)
     end)
 
-    if frame.EnableMouseWheel and frame.HookScript then
-        frame:EnableMouseWheel(true)
-        frame:HookScript("OnMouseWheel", function(targetFrame, delta)
-            FrameMover:ScaleFrame(targetFrame, frameName, delta)
-        end)
+    inputFrame:HookScript("OnDragStart", function(_, button)
+        if button == "LeftButton" then
+            FrameMover:StartMoving(targetFrame, frameName)
+        end
+    end)
+
+    inputFrame:HookScript("OnDragStop", function()
+        FrameMover:StopMoving(targetFrame, frameName)
+    end)
+
+    self.attachedInputs[inputKey] = true
+end
+
+function FrameMover:AttachMouseWheel(inputFrame, targetFrame, frameName)
+    if not inputFrame or not inputFrame.HookScript or not inputFrame.EnableMouseWheel or not IsSafeFrame(targetFrame) then
+        return
     end
 
-    self:ApplyPlacement(frame, frameName)
-    self.attachedFrames[frameName] = true
+    if inputFrame.IsForbidden and inputFrame:IsForbidden() then
+        return
+    end
+
+    local inputKey = tostring(inputFrame) .. ":" .. frameName
+    if self.attachedWheels[inputKey] then
+        return
+    end
+
+    inputFrame:EnableMouseWheel(true)
+    inputFrame:HookScript("OnMouseWheel", function(_, delta)
+        FrameMover:ScaleFrame(targetFrame, frameName, delta)
+    end)
+
+    self.attachedWheels[inputKey] = true
+end
+
+function FrameMover:CreateDragHandle(frame, frameName)
+    if self.dragHandles[frameName] or not CreateFrame then
+        return
+    end
+
+    local profile = FRAME_PROFILES[frameName] or {}
+    local dragHandle = CreateFrame("Frame", nil, frame)
+    dragHandle:SetPoint("TOPLEFT", frame, "TOPLEFT", 0, 0)
+    dragHandle:SetPoint("TOPRIGHT", frame, "TOPRIGHT", 0, 0)
+    dragHandle:SetHeight(profile.dragHeight or DEFAULT_DRAG_HEIGHT)
+
+    if dragHandle.SetFrameLevel and frame.GetFrameLevel then
+        dragHandle:SetFrameLevel((frame:GetFrameLevel() or 0) + 100)
+    end
+
+    dragHandle:EnableMouse(false)
+    dragHandle:SetScript("OnUpdate", function(targetFrame)
+        local settings = FrameMover:GetSettings()
+        local enabled = settings
+            and not settings.locked
+            and IsModifierDown(settings.modifier or "SHIFT")
+            and not (InCombatLockdown and InCombatLockdown())
+
+        enabled = enabled and true or false
+        if targetFrame.superNovaMouseEnabled ~= enabled then
+            targetFrame:EnableMouse(enabled)
+            targetFrame.superNovaMouseEnabled = enabled
+        end
+    end)
+
+    self.dragHandles[frameName] = dragHandle
+    self:AttachInputHandlers(dragHandle, frame, frameName, { preserveMouseState = true })
+end
+
+function FrameMover:ConfigureFrame(frame, frameName)
+    if not IsSafeFrame(frame) then
+        return
+    end
+
+    if InCombatLockdown and InCombatLockdown() then
+        return
+    end
+
+    if not self.attachedFrames[frameName] then
+        frame:SetMovable(true)
+        frame:SetClampedToScreen(true)
+        frame:EnableMouse(true)
+        frame:RegisterForDrag("LeftButton")
+
+        if frame.SetDontSavePosition then
+            frame:SetDontSavePosition(true)
+        end
+
+        self:ApplyPlacement(frame, frameName)
+        self.attachedFrames[frameName] = true
+    end
+
+    self:AttachInputHandlers(frame, frame, frameName)
+    self:AttachMouseWheel(frame, frame, frameName)
+    self:CreateDragHandle(frame, frameName)
+
+    local profile = FRAME_PROFILES[frameName]
+    if profile and profile.wheelTargets then
+        for _, inputPath in ipairs(profile.wheelTargets) do
+            self:AttachMouseWheel(ResolveFramePath(inputPath), frame, frameName)
+        end
+    end
 end
 
 function FrameMover:RegisterConfiguredFrames()
