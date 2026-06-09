@@ -27,6 +27,7 @@ local DEFAULT_DATABASE = {
                 "ItemUpgradeFrame",
                 "CovenantMissionFrame",
                 "GarrisonLandingPage",
+                "WorldMapFrame",
             },
             placements = {},
         },
