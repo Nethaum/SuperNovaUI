@@ -1,0 +1,11 @@
+*.zip
+*.bak
+*.tmp
+*.log
+
+.vscode/
+.idea/
+
+work/
+dist/
+release/
