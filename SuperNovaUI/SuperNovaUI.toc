@@ -1,0 +1,22 @@
+## Interface: 120005
+## Title: |cff38bdf8SuperNovaUI|r
+## Notes: Interface modular para o WoW Retail.
+## Notes-enUS: Modular UI tools for WoW Retail.
+## Notes-ptBR: Interface modular para o WoW Retail.
+## Author: Nethaum
+## Version: 0.1.5
+## IconTexture: Interface\AddOns\SuperNovaUI\Media\Icons\SuperNovaUI
+## Category-enUS: UI Overhaul
+## Category-ptBR: Renovação da UI
+## SavedVariables: SuperNovaUIDB
+## SavedVariablesPerCharacter: SuperNovaUICharDB
+## AddonCompartmentFunc: SuperNovaUI_AddonCompartmentFunc
+## Group: SuperNovaUI
+
+Core\Bootstrap.lua
+Core\Console.lua
+Core\Database.lua
+Core\SlashCommands.lua
+
+Modules\FrameMover.lua
+Modules\ChatHistory.lua
