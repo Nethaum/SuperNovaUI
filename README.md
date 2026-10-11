@@ -6,32 +6,20 @@ The project focuses on practical interface improvements organized into clear fea
 
 ## Features
 
-### Window Mover
+### Compatibility
 
-Move and scale selected Blizzard UI windows with guarded interactions.
+Restores Blizzard globals that were removed while installed addons still call them. A shim only activates when the global is missing, so it never overrides Blizzard or another addon (it coexists with FixRematch / `!RematchCompat`).
 
-- Hold `Shift` and drag a registered window to move it.
-- Hold `Ctrl` and use the mouse wheel over a registered window to scale it.
-- Saved positions and scale values are stored in `SuperNovaUIDB`.
-- Window movement is disabled during combat lockdown.
+- `MouseIsOver` (removed in patch 12.1): fixes the blank Rematch 5.3.1 window, its menus, drag and drop, queue and notes card.
+- `LE_BATTLE_PET_WEATHER`, `LE_BATTLE_PET_ALLY`, `LE_BATTLE_PET_ENEMY` (replaced by `Enum.BattlePetOwner`): fixes the original tdBattlePetScript.
 
-### Chat History
-
-Use regular arrow-key history navigation in the chat input box.
-
-- Press `Enter` to open chat.
-- Press `Up` and `Down` to cycle through recently typed chat text and slash commands.
-- Chat edit boxes are configured with history lines and direct arrow navigation.
+Note: patch 12.1 "secret value" restrictions can still make Rematch show "Unknown (npc ID ...)" for some targets. That is a separate issue the shim cannot fix.
 
 ## Commands
 
 - `/snui` or `/supernova` - show help.
 - `/snui status` - show global SuperNovaUI status.
-- `/snui windows status` - show Window Mover status.
-- `/snui windows lock` - lock window movement and scaling.
-- `/snui windows unlock` - unlock window movement and scaling.
-- `/snui windows reset` - close windows and reset saved window positions and scales.
-- `/snui chat status` - show Chat History status.
+- `/snui compat` - show which compatibility shims are active.
 - `/snui reload` - reload the UI.
 
 ## Installation

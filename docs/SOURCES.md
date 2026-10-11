@@ -14,15 +14,10 @@
 Official public documentation for WoW widget methods is incomplete. For UI widget APIs, use Warcraft Wiki when official Blizzard sources or local client files do not provide the needed detail:
 
 - `https://warcraft.wiki.gg/wiki/UIOBJECT_Frame`
-- `https://warcraft.wiki.gg/wiki/API_Frame_RegisterForDrag`
-- `https://warcraft.wiki.gg/wiki/API_Frame_SetUserPlaced`
-- `https://warcraft.wiki.gg/wiki/UIOBJECT_EditBox`
-- `https://warcraft.wiki.gg/wiki/API_EditBox_SetAltArrowKeyMode`
-- `https://warcraft.wiki.gg/wiki/API_EditBox_AddHistoryLine`
+- `https://warcraft.wiki.gg/wiki/Console_variables`
 
 ## Inspiration Only
 
 Repositories and AddOn folders provided by the user are examples for product direction and architecture study only. They must not be copied.
 
-- BlizzMove: `https://github.com/Kiatra/BlizzMove`
 - ElvUI: `https://github.com/tukui-org/ElvUI`

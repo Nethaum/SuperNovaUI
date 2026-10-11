@@ -2,41 +2,11 @@ local addonName, SN = ...
 
 local DEFAULT_DATABASE = {
     debug = false,
-    modules = {
-        frameMover = {
-            enabled = true,
-            locked = false,
-            modifier = "SHIFT",
-            allowScaling = true,
-            scaleModifier = "CTRL",
-            scaleStep = 0.05,
-            minScale = 0.70,
-            maxScale = 1.80,
-            frames = {
-                "CharacterFrame",
-                "SpellBookFrame",
-                "PlayerSpellsFrame",
-                "ProfessionsFrame",
-                "CollectionsJournal",
-                "EncounterJournal",
-                "PVEFrame",
-                "FriendsFrame",
-                "GuildFrame",
-                "CommunitiesFrame",
-                "AuctionHouseFrame",
-                "ItemUpgradeFrame",
-                "CovenantMissionFrame",
-                "GarrisonLandingPage",
-                "WorldMapFrame",
-            },
-            placements = {},
-        },
-        chatHistory = {
-            enabled = true,
-            maxLines = 64,
-            useArrowKeys = true,
-        },
-    },
+    modules = {},
+}
+
+local DEFAULT_CHARACTER_DATABASE = {
+    modules = {},
 }
 
 local function CopyDefaults(defaults, target)
@@ -58,9 +28,16 @@ function SN:InitializeDatabase()
     SuperNovaUICharDB = SuperNovaUICharDB or {}
 
     CopyDefaults(DEFAULT_DATABASE, SuperNovaUIDB)
+    CopyDefaults(DEFAULT_CHARACTER_DATABASE, SuperNovaUICharDB)
 
     self.db = SuperNovaUIDB
     self.charDB = SuperNovaUICharDB
+end
+
+-- Modules register their own defaults here before InitializeDatabase runs.
+function SN:RegisterModuleDefaults(moduleName, accountDefaults, characterDefaults)
+    DEFAULT_DATABASE.modules[moduleName] = accountDefaults or { enabled = true }
+    DEFAULT_CHARACTER_DATABASE.modules[moduleName] = characterDefaults or {}
 end
 
 function SN:GetModuleSettings(moduleName)
@@ -71,11 +48,10 @@ function SN:GetModuleSettings(moduleName)
     return self.db.modules[moduleName]
 end
 
-function SN:ResetFramePlacements()
-    local settings = self:GetModuleSettings("frameMover")
-    if not settings then
-        return
+function SN:GetCharacterModuleSettings(moduleName)
+    if not self.charDB or not self.charDB.modules then
+        return nil
     end
 
-    settings.placements = {}
+    return self.charDB.modules[moduleName]
 end
