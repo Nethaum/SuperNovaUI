@@ -3,7 +3,8 @@ local addonName, SN = ...
 local HELP_LINES = {
     "commands:",
     "/snui status - show SuperNovaUI status",
-    "/snui compat - show compatibility shims for removed Blizzard globals",
+    "/snui compat - open the compatibility menu (addons that need a fix)",
+    "/snui compat status - print the compatibility state in the chat",
     "/snui reload - reload the UI",
 }
 
