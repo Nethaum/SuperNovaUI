@@ -1,0 +1,10 @@
+## Interface: 120100, 120105
+## Title: |cff38bdf8!SuperNovaUI|r Compat
+## Notes: Loads first and restores Blizzard globals removed in recent patches that other addons still call.
+## Notes-enUS: Loads first and restores Blizzard globals removed in recent patches that other addons still call.
+## Notes-ptBR: Carrega primeiro e restaura globais da Blizzard removidas em patches recentes que outros addons ainda chamam.
+## Author: Nethaum
+## Version: 0.1.0
+## Group: SuperNovaUI
+
+Shims.lua

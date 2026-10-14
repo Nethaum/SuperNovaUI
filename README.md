@@ -8,10 +8,11 @@ The project focuses on practical interface improvements organized into clear fea
 
 ### Compatibility
 
-Restores Blizzard globals that were removed while installed addons still call them. A shim only activates when the global is missing, so it never overrides Blizzard or another addon (it coexists with FixRematch / `!RematchCompat`).
+Restores Blizzard globals that were removed while installed addons still call them. The fixes live in the companion addon `!SuperNovaUI_Compat`: the leading `!` makes the game load it before every other addon, which matters for addons that call the removed functions while they are loading. A shim only activates when the global is missing, so it never overrides Blizzard or another addon (it coexists with FixRematch / `!RematchCompat`).
 
 - `MouseIsOver` (removed in patch 12.1): fixes the blank Rematch 5.3.1 window, its menus, drag and drop, queue and notes card.
 - `LE_BATTLE_PET_WEATHER`, `LE_BATTLE_PET_ALLY`, `LE_BATTLE_PET_ENEMY` (replaced by `Enum.BattlePetOwner`): fixes the original tdBattlePetScript.
+- Item globals that moved to `C_Item` (`GetItemInfo`, `GetItemInfoInstant`, `GetItemCount`, `GetDetailedItemLevelInfo`, `GetItemSpell`, `IsUsableItem`, ...): fixes addons that still call the old names, such as ClassCodex and CraftInfoAnywhere. Each one is restored only when missing.
 
 The compatibility menu (`/snui compat`) lists which known incompatible addons you have installed (tdBattlePetScript, its Rematch plugin, Rematch ElvUI Skin, RematchCelestialTournament, RematchNextTarget, Rematch) and whether each one is already fixed. An addon counts as fixed when its `.toc` has the `X-SuperNovaUI-Patch` field. Game addons cannot write to other addons' files, so the fixes themselves are applied outside the game; the menu's "How to fix" button shows where to get them.
 
@@ -27,17 +28,14 @@ Note: patch 12.1 "secret value" restrictions can still make Rematch show "Unknow
 
 ## Installation
 
-Copy the `SuperNovaUI` AddOn folder into:
+Copy both AddOn folders into:
 
 ```text
 World of Warcraft/_retail_/Interface/AddOns/
 ```
 
-The installed folder should contain `SuperNovaUI.toc` directly inside it:
-
-```text
-Interface/AddOns/SuperNovaUI/SuperNovaUI.toc
-```
+- `SuperNovaUI` (the addon, with `SuperNovaUI.toc` directly inside it)
+- `!SuperNovaUI_Compat` (loads first and provides the compatibility fixes; without it the fixes are inactive)
 
 ## Development Notes
 

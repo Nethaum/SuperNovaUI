@@ -1,4 +1,5 @@
-## Interface: 120005
+## Interface: 120100, 120105
+## OptionalDeps: !SuperNovaUI_Compat
 ## Title: |cff38bdf8SuperNovaUI|r
 ## Notes: Interface modular para o WoW Retail.
 ## Notes-enUS: Modular UI tools for WoW Retail.

@@ -157,7 +157,14 @@ function Compat:RefreshPanel()
     Add("GameFontNormalLarge", "Built-in fixes")
     y = y - 24
 
-    for _, shim in ipairs(self:GetShimStates()) do
+    local shims = self:GetShimStates()
+    if not shims then
+        local line = Add("GameFontHighlightSmall", "|cffff9933The companion addon !SuperNovaUI_Compat is not installed.|r These fixes are inactive. Copy the !SuperNovaUI_Compat folder next to SuperNovaUI.")
+        y = y - line:GetStringHeight() - 6
+        shims = {}
+    end
+
+    for _, shim in ipairs(shims) do
         local state = shim.active and "|cff00ff00active|r" or "|cff888888not needed (already provided)|r"
         local line = Add("GameFontHighlightSmall", shim.description .. " - " .. state)
         y = y - line:GetStringHeight() - 6

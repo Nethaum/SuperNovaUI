@@ -1,51 +1,9 @@
 local addonName, SN = ...
 
-local Compat = {
-    installed = {},
-}
+local Compat = {}
 
 -- toc field written into every addon we patched (see wow-addon-patches)
 local PATCH_FIELD = "X-SuperNovaUI-Patch"
-
---[[
-    Each shim restores a global that Blizzard removed while installed addons still call it.
-    A shim only activates when the global is missing, so it never overrides Blizzard's own
-    version or another addon's shim (for example FixRematch / !RematchCompat).
-
-    Shim fields:
-      name        - short name
-      description - shown in the compatibility menu and in /snui compat status
-      isMissing   - returns true when the global is absent
-      install     - defines the global
-]]
-local SHIMS = {
-    {
-        name = "MouseIsOver",
-        description = "MouseIsOver (removed in patch 12.1). Fixes Rematch 5.3.1 blank window, menus, drag and drop.",
-        isMissing = function()
-            return _G.MouseIsOver == nil
-        end,
-        install = function()
-            -- same pass-through Blizzard shipped until 12.0.7 (idea credit: FixRematch / !RematchCompat, MIT)
-            _G.MouseIsOver = function(region, topOffset, bottomOffset, leftOffset, rightOffset)
-                return region:IsMouseOver(topOffset, bottomOffset, leftOffset, rightOffset)
-            end
-        end,
-    },
-    {
-        name = "LE_BATTLE_PET_*",
-        description = "LE_BATTLE_PET_WEATHER/ALLY/ENEMY (replaced by Enum.BattlePetOwner). Fixes tdBattlePetScript.",
-        isMissing = function()
-            return _G.LE_BATTLE_PET_ALLY == nil or _G.LE_BATTLE_PET_ENEMY == nil or _G.LE_BATTLE_PET_WEATHER == nil
-        end,
-        install = function()
-            local owner = Enum and Enum.BattlePetOwner
-            _G.LE_BATTLE_PET_WEATHER = _G.LE_BATTLE_PET_WEATHER or (owner and owner.Weather) or 0
-            _G.LE_BATTLE_PET_ALLY = _G.LE_BATTLE_PET_ALLY or (owner and owner.Ally) or 1
-            _G.LE_BATTLE_PET_ENEMY = _G.LE_BATTLE_PET_ENEMY or (owner and owner.Enemy) or 2
-        end,
-    },
-}
 
 --[[
     Addons that need a fix file by file (a shim cannot repair them).
@@ -100,27 +58,11 @@ local function IsAddonEnabled(addon)
     return not ok or state == nil or state > 0
 end
 
-function Compat:Initialize()
-    for _, shim in ipairs(SHIMS) do
-        if shim.isMissing() then
-            shim.install()
-            self.installed[shim.name] = true
-            SN:Debug(self.name, "installed shim " .. shim.name)
-        end
-    end
-end
-
--- list of shims with their state: "active" (installed by us) or "provided" (someone else already did)
+-- The shims live in the companion addon !SuperNovaUI_Compat (it loads first, see its Shims.lua).
+-- Returns its list of { name, description, active }, or nil when the companion is not installed.
 function Compat:GetShimStates()
-    local states = {}
-    for _, shim in ipairs(SHIMS) do
-        tinsert(states, {
-            name = shim.name,
-            description = shim.description,
-            active = self.installed[shim.name] and true or false,
-        })
-    end
-    return states
+    local shared = _G.SuperNovaUICompat
+    return shared and shared:GetShimStates() or nil
 end
 
 -- known addons that are installed, with: fixed (patched), enabled, problem
@@ -140,9 +82,14 @@ function Compat:GetAddonStates()
 end
 
 function Compat:PrintStatus()
-    SN:Print("Compatibility shims:")
-    for _, shim in ipairs(self:GetShimStates()) do
-        SN:Print(string.format("- %s: %s", shim.description, shim.active and "active (provided by SuperNovaUI)" or "not needed (already provided)"))
+    local shims = self:GetShimStates()
+    if shims then
+        SN:Print("Compatibility shims:")
+        for _, shim in ipairs(shims) do
+            SN:Print(string.format("- %s: %s", shim.description, shim.active and "active (provided by !SuperNovaUI_Compat)" or "not needed (already provided)"))
+        end
+    else
+        SN:Print("Compatibility shims: companion addon !SuperNovaUI_Compat is not installed, so they are inactive.")
     end
 
     local addons = self:GetAddonStates()
