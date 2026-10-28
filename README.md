@@ -14,7 +14,7 @@ Restores Blizzard globals that were removed while installed addons still call th
 - `LE_BATTLE_PET_WEATHER`, `LE_BATTLE_PET_ALLY`, `LE_BATTLE_PET_ENEMY` (replaced by `Enum.BattlePetOwner`): fixes the original tdBattlePetScript.
 - Item globals that moved to `C_Item` (`GetItemInfo`, `GetItemInfoInstant`, `GetItemCount`, `GetDetailedItemLevelInfo`, `GetItemSpell`, `IsUsableItem`, ...): fixes addons that still call the old names, such as ClassCodex and CraftInfoAnywhere. Each one is restored only when missing.
 
-The compatibility menu (`/snui compat`) lists which known incompatible addons you have installed (tdBattlePetScript, its Rematch plugin, Rematch ElvUI Skin, RematchCelestialTournament, RematchNextTarget, Rematch) and whether each one is already fixed. An addon counts as fixed when its `.toc` has the `X-SuperNovaUI-Patch` field. Game addons cannot write to other addons' files, so the fixes themselves are applied outside the game; the menu's "How to fix" button shows where to get them.
+The compatibility menu (`/snui compat`) lists which known incompatible addons you have installed (tdBattlePetScript, its Rematch plugin, Rematch ElvUI Skin, RematchCelestialTournament, RematchNextTarget, Rematch) and whether each one is already fixed. A "Tweaks" section shows the state of the Premade Groups Filter tweak (active, disabled, not hooked or not installed). An addon counts as fixed when its `.toc` has the `X-SuperNovaUI-Patch` field. Game addons cannot write to other addons' files, so the fixes themselves are applied outside the game; the menu's "How to fix" button shows where to get them.
 
 Note: patch 12.1 "secret value" restrictions can still make Rematch show "Unknown (npc ID ...)" for some targets. That is a separate issue the shim cannot fix.
 

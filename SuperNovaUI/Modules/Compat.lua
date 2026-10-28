@@ -38,6 +38,19 @@ local KNOWN_ADDONS = {
     },
 }
 
+--[[
+    Behaviour tweaks SuperNovaUI applies to other addons at runtime (they are not compatibility
+    fixes, so they are listed apart). Each one is a SuperNovaUI module that sets `installed`
+    once it hooked the other addon.
+]]
+local TWEAKS = {
+    {
+        module = "pgf",
+        addon = "PremadeGroupsFilter",
+        description = "Premade Groups Filter: Party Fit also hides groups with my class and specialization.",
+    },
+}
+
 local function GetMetadata(addon, field)
     local getMetadata = C_AddOns and C_AddOns.GetAddOnMetadata or GetAddOnMetadata
     local ok, value = pcall(getMetadata, addon, field)
@@ -65,6 +78,28 @@ end
 function Compat:GetShimStates()
     local shared = _G.SuperNovaUICompat
     return shared and shared:GetShimStates() or nil
+end
+
+-- tweaks with a state: "active", "disabled", "not hooked" (addon present but not reached) or "not installed"
+function Compat:GetTweakStates()
+    local states = {}
+    for _, tweak in ipairs(TWEAKS) do
+        local module = SN:GetModule(tweak.module)
+        local settings = SN:GetModuleSettings(tweak.module)
+        local state
+        if not AddonExists(tweak.addon) then
+            state = "not installed"
+        elseif settings and settings.enabled == false then
+            state = "disabled"
+        elseif module and module.installed then
+            state = "active"
+        else
+            state = "not hooked"
+        end
+
+        tinsert(states, { name = tweak.module, description = tweak.description, state = state })
+    end
+    return states
 end
 
 -- known addons that are installed, with: fixed (patched), enabled, problem
@@ -100,6 +135,11 @@ function Compat:PrintStatus()
         end
     else
         SN:Print("Compatibility shims: companion addon !SuperNovaUI_Compat is not installed, so they are inactive.")
+    end
+
+    SN:Print("Tweaks:")
+    for _, tweak in ipairs(self:GetTweakStates()) do
+        SN:Print(string.format("- %s: %s", tweak.description, tweak.state))
     end
 
     local addons = self:GetAddonStates()

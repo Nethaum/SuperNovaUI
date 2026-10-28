@@ -16,6 +16,12 @@ local FIX_URL = "https://github.com/Nethaum/SuperNovaUI"
 local STATUS_FIXED = "|cff00ff00Fixed|r"
 local STATUS_NEEDS_FIX = "|cffff9933Needs fix|r"
 
+-- colour of a tweak state (see Compat:GetTweakStates); anything else is shown grey
+local TWEAK_COLORS = {
+    ["active"] = "|cff00ff00",
+    ["not hooked"] = "|cffff9933",
+}
+
 StaticPopupDialogs["SUPERNOVAUI_COMPAT_FIX"] = {
     text = "Addons are fixed outside the game: close WoW, run apply.ps1 from the compatibility patches, then start the game again.\n\nPatches:",
     button1 = OKAY,
@@ -167,6 +173,16 @@ function Compat:RefreshPanel()
     for _, shim in ipairs(shims) do
         local state = shim.active and "|cff00ff00active|r" or "|cff888888not needed (already provided)|r"
         local line = Add("GameFontHighlightSmall", shim.description .. " - " .. state)
+        y = y - line:GetStringHeight() - 6
+    end
+
+    y = y - 6
+    Add("GameFontNormalLarge", "Tweaks")
+    y = y - 24
+
+    for _, tweak in ipairs(self:GetTweakStates()) do
+        local color = TWEAK_COLORS[tweak.state] or "|cff888888"
+        local line = Add("GameFontHighlightSmall", tweak.description .. " - " .. color .. tweak.state .. "|r")
         y = y - line:GetStringHeight() - 6
     end
 
