@@ -63,7 +63,7 @@ No dependencies. Settings are kept in `SuperNovaUIDB`.
 ## What it never does
 
 - It never edits, replaces or deletes files of other addons.
-- It never overrides a function that already exists.
+- The restored functions are only defined when they are missing. The two tweaks (Rematch, Premade Groups Filter) wrap one function of those addons while the game runs, and nothing is written to disk.
 - It does not collect or send any data.
 - It does not automate gameplay.
 
@@ -160,7 +160,7 @@ Sem dependências. As configurações ficam em `SuperNovaUIDB`.
 ## O que ele nunca faz
 
 - Nunca edita, substitui nem apaga arquivos de outros addons.
-- Nunca sobrescreve uma função que já existe.
+- As funções devolvidas só são definidas quando estão faltando. Os dois ajustes (Rematch, Premade Groups Filter) embrulham uma função desses addons enquanto o jogo roda, e nada é gravado em disco.
 - Não coleta nem envia nenhum dado.
 - Não automatiza o jogo.
 
