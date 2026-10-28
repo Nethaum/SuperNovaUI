@@ -10,9 +10,6 @@ local WIDTH = 500
 local SIDE = 16
 local TOP = 34
 
--- where the compatibility patches and the apply script are published
-local FIX_URL = "https://github.com/Nethaum/SuperNovaUI"
-
 local STATUS_FIXED = "|cff00ff00Fixed|r"
 local STATUS_NEEDS_FIX = "|cffff9933Needs fix|r"
 
@@ -23,21 +20,8 @@ local TWEAK_COLORS = {
 }
 
 StaticPopupDialogs["SUPERNOVAUI_COMPAT_FIX"] = {
-    text = "Addons are fixed outside the game: close WoW, run apply.ps1 from the compatibility patches, then start the game again.\n\nPatches:",
+    text = "Addons marked \"Needs fix\" have a known problem with this game version.\n\nSuperNovaUI never edits other addons' files. Look for an updated version on the addon's page (CurseForge, Wago or its website) or ask its author.\n\nFixes that can be applied while the game runs are already built in: see \"Built-in fixes\" and \"Tweaks\".",
     button1 = OKAY,
-    hasEditBox = true,
-    editBoxWidth = 330,
-    OnShow = function(dialog)
-        local editBox = dialog.EditBox or dialog.editBox
-        if editBox then
-            editBox:SetText(FIX_URL)
-            editBox:HighlightText()
-            editBox:SetFocus()
-        end
-    end,
-    EditBoxOnEscapePressed = function(editBox)
-        editBox:GetParent():Hide()
-    end,
     timeout = 0,
     whileDead = true,
     hideOnEscape = true,

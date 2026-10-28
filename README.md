@@ -14,7 +14,7 @@ Restores Blizzard globals that were removed while installed addons still call th
 - `LE_BATTLE_PET_WEATHER`, `LE_BATTLE_PET_ALLY`, `LE_BATTLE_PET_ENEMY` (replaced by `Enum.BattlePetOwner`): fixes the original tdBattlePetScript.
 - Item globals that moved to `C_Item` (`GetItemInfo`, `GetItemInfoInstant`, `GetItemCount`, `GetDetailedItemLevelInfo`, `GetItemSpell`, `IsUsableItem`, ...): fixes addons that still call the old names, such as ClassCodex and CraftInfoAnywhere. Each one is restored only when missing.
 
-The compatibility menu (`/snui compat`) lists which known incompatible addons you have installed (tdBattlePetScript, its Rematch plugin, Rematch ElvUI Skin, RematchCelestialTournament, RematchNextTarget, Rematch) and whether each one is already fixed. A "Tweaks" section shows the state of the Premade Groups Filter tweak (active, disabled, not hooked or not installed). An addon counts as fixed when its `.toc` has the `X-SuperNovaUI-Patch` field. Game addons cannot write to other addons' files, so the fixes themselves are applied outside the game; the menu's "How to fix" button shows where to get them.
+The compatibility menu (`/snui compat`) lists which known incompatible addons you have installed (tdBattlePetScript, its Rematch plugin, Rematch ElvUI Skin, RematchCelestialTournament, RematchNextTarget, Rematch) and whether each one is already fixed. A "Tweaks" section shows the state of the Premade Groups Filter tweak (active, disabled, not hooked or not installed). An addon counts as fixed when its `.toc` has the `X-SuperNovaUI-Patch` field (the Rematch fix is checked at runtime instead). Game addons cannot write to other addons' files and SuperNovaUI never edits them; the "How to fix" button only explains what to do (look for an updated version or ask the author).
 
 Note: patch 12.1 "secret value" restrictions can still make Rematch show "Unknown (npc ID ...)" for some targets. That is a separate issue the shim cannot fix.
 
@@ -46,6 +46,14 @@ World of Warcraft/_retail_/Interface/AddOns/
 
 - `SuperNovaUI` (the addon, with `SuperNovaUI.toc` directly inside it)
 - `!SuperNovaUI_Compat` (loads first and provides the compatibility fixes; without it the fixes are inactive)
+
+## Releasing
+
+`python build/package.py` builds `dist/SuperNovaUI-<version>.zip` (both addon folders plus the license). The project description for CurseForge is in `docs/CURSEFORGE.md` (English and Brazilian Portuguese).
+
+## License
+
+MIT, see `LICENSE`.
 
 ## Development Notes
 
