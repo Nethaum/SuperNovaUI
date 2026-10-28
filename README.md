@@ -18,12 +18,17 @@ The compatibility menu (`/snui compat`) lists which known incompatible addons yo
 
 Note: patch 12.1 "secret value" restrictions can still make Rematch show "Unknown (npc ID ...)" for some targets. That is a separate issue the shim cannot fix.
 
+### Premade Groups Filter
+
+With Premade Groups Filter installed, **Party Fit** also hides groups that already have a member with your character's class and specialization (it used to check only free tank/healer/damage slots). It works while the game runs, by wrapping two PGF functions, so PGF's own files stay untouched and updating PGF does not undo it.
+
 ## Commands
 
 - `/snui` or `/supernova` - show help.
 - `/snui status` - show global SuperNovaUI status.
 - `/snui compat` - open the compatibility menu.
 - `/snui compat status` - print the compatibility state in the chat.
+- `/snui pgf` - show the Premade Groups Filter tweak state.
 - `/snui reload` - reload the UI.
 
 ## Installation

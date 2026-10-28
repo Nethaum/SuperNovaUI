@@ -21,3 +21,4 @@ Core\SlashCommands.lua
 
 Modules\Compat.lua
 Modules\CompatPanel.lua
+Modules\PremadeGroupsFilter.lua
