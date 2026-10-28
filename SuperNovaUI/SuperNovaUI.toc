@@ -6,6 +6,7 @@
 ## Notes-ptBR: Interface modular para o WoW Retail.
 ## Author: Nethaum
 ## Version: 0.1.6
+## X-Curse-Project-ID: 1771235
 ## IconTexture: Interface\AddOns\SuperNovaUI\Media\Icons\SuperNovaUI
 ## Category-enUS: UI Overhaul
 ## Category-ptBR: Renovação da UI
