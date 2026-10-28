@@ -33,6 +33,8 @@ local KNOWN_ADDONS = {
     {
         name = "Rematch",
         problem = "5.3.1 raises an error reading NPC names (secret values, patch 12.1).",
+        -- fixed at runtime by the SuperNovaUI module of this name instead of by a patched file
+        fixedByModule = "rematch",
     },
 }
 
@@ -70,11 +72,19 @@ function Compat:GetAddonStates()
     local states = {}
     for _, known in ipairs(KNOWN_ADDONS) do
         if AddonExists(known.name) then
+            local fixed
+            if known.fixedByModule then
+                local module = SN:GetModule(known.fixedByModule)
+                fixed = module ~= nil and module.installed == true
+            else
+                fixed = GetMetadata(known.name, PATCH_FIELD) ~= nil
+            end
+
             tinsert(states, {
                 name = known.name,
                 problem = known.problem,
                 enabled = IsAddonEnabled(known.name),
-                fixed = GetMetadata(known.name, PATCH_FIELD) ~= nil,
+                fixed = fixed,
             })
         end
     end

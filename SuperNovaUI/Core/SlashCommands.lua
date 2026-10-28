@@ -6,6 +6,7 @@ local HELP_LINES = {
     "/snui compat - open the compatibility menu (addons that need a fix)",
     "/snui compat status - print the compatibility state in the chat",
     "/snui pgf - show the Premade Groups Filter tweak (Party Fit) state",
+    "/snui rematch - show the Rematch fix (NPC names) state",
     "/snui reload - reload the UI",
 }
 

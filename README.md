@@ -22,6 +22,10 @@ Note: patch 12.1 "secret value" restrictions can still make Rematch show "Unknow
 
 With Premade Groups Filter installed, **Party Fit** also hides groups that already have a member with your character's class and specialization (it used to check only free tank/healer/damage slots). It works while the game runs, by wrapping two PGF functions, so PGF's own files stay untouched and updating PGF does not undo it.
 
+### Rematch
+
+Rematch 5.3.1 reads NPC names from a tooltip, and patch 12.1 made that text a "secret value", which raised an error and broke opening the pet journal. SuperNovaUI wraps `Rematch.targetInfo:GetNpcName` while the game runs: when the original fails, the NPC shows as `Unknown (npc id N)`, the label Rematch already uses for names it cannot find. Rematch's own files stay untouched. The real names return when Rematch ships its own fix.
+
 ## Commands
 
 - `/snui` or `/supernova` - show help.
@@ -29,6 +33,7 @@ With Premade Groups Filter installed, **Party Fit** also hides groups that alrea
 - `/snui compat` - open the compatibility menu.
 - `/snui compat status` - print the compatibility state in the chat.
 - `/snui pgf` - show the Premade Groups Filter tweak state.
+- `/snui rematch` - show the Rematch fix state.
 - `/snui reload` - reload the UI.
 
 ## Installation
