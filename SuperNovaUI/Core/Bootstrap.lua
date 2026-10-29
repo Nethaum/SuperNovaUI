@@ -45,8 +45,6 @@ function SN:HandleAddonLoaded(loadedAddonName)
     self:InitializeDatabase()
     self:RegisterSlashCommands()
     self:InitializeModules()
-
-    self:Print("loaded. Use /snui for commands.")
 end
 
 function SuperNovaUI_AddonCompartmentFunc()
