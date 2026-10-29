@@ -6,6 +6,21 @@ Retail only. Tested on the 12.1.5 client (interface 120100 / 120105).
 
 ---
 
+## Which addons does it help?
+
+**None of these addons is required.** SuperNovaUI works the same if you have only some of them, or none: each fix only has something to do when its addon is installed, and nothing breaks when it is missing.
+
+| Addon | What SuperNovaUI does | How |
+|---|---|---|
+| **Rematch** (5.3.1) | Fixes the blank window, broken menus, drag and drop, and the error that stopped the pet journal from opening | Restored function + runtime fix |
+| **Premade Groups Filter** | Party Fit also hides groups that already have your class and specialization | Runtime tweak |
+| **ClassCodex** | Fixes the `attempt to call a nil value` errors on item functions | Restored functions |
+| **CraftInfoAnywhere** | Same item-function errors (tooltips of equipped items) | Restored functions |
+| **tdBattlePetScript** | Removes the pet battle constants error. Other problems of this version remain (see below) | Restored constants |
+| Any other addon that still calls `MouseIsOver`, `LE_BATTLE_PET_*` or the old item functions | Same effect | Restored functions |
+
+The compatibility menu also lists, as **Needs fix**, addons that have problems SuperNovaUI cannot repair from outside because their own code must change: **tdBattlePetScript**, **tdBattlePetScript_Rematch**, **Rematch ElvUI Skin**, **RematchCelestialTournament** and **RematchNextTarget**. Those need an update from their authors.
+
 ## What it does
 
 ### 1. Restores removed Blizzard functions (`!SuperNovaUI_Compat`)
@@ -102,6 +117,21 @@ MIT. See `LICENSE` inside each addon folder.
 Somente Retail. Testado no cliente 12.1.5 (interface 120100 / 120105).
 
 ---
+
+## Quais addons ele ajuda?
+
+**Nenhum desses addons é obrigatório.** O SuperNovaUI funciona igual se você tiver só alguns deles, ou nenhum: cada correção só tem o que fazer quando o addon dela está instalado, e nada quebra quando ele está ausente.
+
+| Addon | O que o SuperNovaUI faz | Como |
+|---|---|---|
+| **Rematch** (5.3.1) | Corrige a janela em branco, os menus quebrados, o arrastar e soltar e o erro que impedia o diário de mascotes de abrir | Função devolvida + correção em tempo de execução |
+| **Premade Groups Filter** | O Party Fit também esconde grupos que já têm a sua classe e especialização | Ajuste em tempo de execução |
+| **ClassCodex** | Corrige os erros `attempt to call a nil value` nas funções de item | Funções devolvidas |
+| **CraftInfoAnywhere** | Os mesmos erros das funções de item (tooltip dos itens equipados) | Funções devolvidas |
+| **tdBattlePetScript** | Remove o erro das constantes de batalha de mascotes. Outros problemas desta versão continuam (veja abaixo) | Constantes devolvidas |
+| Qualquer outro addon que ainda chame `MouseIsOver`, `LE_BATTLE_PET_*` ou as funções antigas de item | O mesmo efeito | Funções devolvidas |
+
+O menu de compatibilidade também lista, como **Needs fix**, addons com problemas que o SuperNovaUI não consegue consertar de fora, porque o código deles precisa mudar: **tdBattlePetScript**, **tdBattlePetScript_Rematch**, **Rematch ElvUI Skin**, **RematchCelestialTournament** e **RematchNextTarget**. Esses dependem de uma atualização dos autores.
 
 ## O que ele faz
 
