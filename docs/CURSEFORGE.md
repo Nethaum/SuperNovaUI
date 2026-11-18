@@ -4,6 +4,10 @@
 
 Retail only. Tested on the 12.1.5 client (interface 120100 / 120105).
 
+![Options panel](https://media.forgecdn.net/attachments/description/1771235/description_513ee319-4c0a-4fea-be05-078a325edbfa.png)
+
+Type `/snui` to open the **options panel**: every function is a module with its own switch, grouped by category, so you only keep what you want.
+
 ---
 
 ## Which addons does it help?
@@ -52,14 +56,34 @@ A window that shows, at a glance:
 
 `/snui compat status` prints the same in the chat.
 
+### 4. Options panel: `/snui`
+
+One window for everything SuperNovaUI does:
+
+- **Modules by category** (General, Compatibility, Groups and dungeons, Battle pets, Tools), each with its own on/off switch, a search box, and **Enable all / Disable all**.
+- A short **first-run question** so you start with only what you want. You can ask it again from the General page.
+- **Profile**: export your settings as text and import them on another character or computer.
+- **English and Portuguese (Brazil)**, automatic or chosen by you.
+- A dark "deep space" look with the game's own font, and a window you can drag and reset.
+
+### 5. Macro by cooldown (module)
+
+Keeps a macro of yours pointing at the right spell: while a spell is on cooldown the macro shows and casts another one, and when the cooldown ends it goes back by itself. It does nothing until you set it up, it never casts anything for you, and a change that would happen during combat waits until the fight ends.
+
+- It remembers when the cooldown ends (talents and Blizzard changes included) and looks again only at that moment, not every second.
+- The panel page has a short guide with a ready-made example. Open it with `/snui macro`.
+- Also available in the WoW Forever version of SuperNovaUI.
+
 ---
 
 ## Commands
 
 | Command | What it does |
 |---|---|
-| `/snui` or `/supernova` | Help |
+| `/snui` or `/supernova` | Open the options panel |
+| `/snui help` | List the commands in the chat |
 | `/snui status` | State of every SuperNovaUI module |
+| `/snui macro` | Open the Macro by cooldown page |
 | `/snui compat` | Open the compatibility menu |
 | `/snui compat status` | Print the compatibility state in the chat |
 | `/snui pgf` | State of the Premade Groups Filter tweak |
@@ -73,7 +97,7 @@ Copy **both** folders from the zip into `World of Warcraft/_retail_/Interface/Ad
 - `SuperNovaUI` – the addon and the menu
 - `!SuperNovaUI_Compat` – restores the removed functions (without it that part is inactive and the menu says so)
 
-No dependencies. Settings are kept in `SuperNovaUIDB`.
+No dependencies. Settings are kept in `SuperNovaUIDB`, and each module can be turned off in the panel.
 
 ## What it never does
 
@@ -115,6 +139,10 @@ MIT. See `LICENSE` inside each addon folder.
 **Mantém seus addons funcionando depois dos patches do jogo.** O SuperNovaUI devolve funções da Blizzard que foram removidas enquanto addons ainda as chamam, corrige bugs conhecidos de alguns addons populares enquanto o jogo roda e mostra quais dos seus addons ainda têm problemas.
 
 Somente Retail. Testado no cliente 12.1.5 (interface 120100 / 120105).
+
+![Painel de opções](https://media.forgecdn.net/attachments/description/1771235/description_513ee319-4c0a-4fea-be05-078a325edbfa.png)
+
+Digite `/snui` para abrir o **painel de opções**: cada função é um módulo com liga/desliga próprio, separado por categoria, para você manter só o que quiser.
 
 ---
 
@@ -164,14 +192,34 @@ Uma janela que mostra, de relance:
 
 O `/snui compat status` imprime o mesmo no chat.
 
+### 4. Painel de opções: `/snui`
+
+Uma janela para tudo o que o SuperNovaUI faz:
+
+- **Módulos por categoria** (General, Compatibility, Groups and dungeons, Battle pets, Tools), cada um com o seu liga/desliga, uma busca e **Enable all / Disable all**.
+- Uma **pergunta rápida na primeira vez**, para você começar só com o que quer. Dá para ver de novo na página General.
+- **Perfil**: exporte suas configurações como texto e importe em outro personagem ou computador.
+- **Inglês e português (Brasil)**, automático ou escolhido por você.
+- Visual escuro de "espaço profundo" com a fonte do próprio jogo, e uma janela que você pode arrastar e reposicionar.
+
+### 5. Macro por recarga (módulo)
+
+Mantém uma macro sua apontando para a magia certa: enquanto uma magia está em recarga, a macro mostra e usa outra, e quando a recarga acaba ela volta sozinha. Ele não faz nada até você configurar, nunca lança nada por você, e uma mudança que aconteceria durante o combate espera a luta acabar.
+
+- Ele guarda quando a recarga termina (talentos e mudanças da Blizzard incluídos) e só olha de novo nesse momento, não a cada segundo.
+- A página do painel tem um guia curto com um exemplo pronto. Abra com `/snui macro`.
+- Também existe na versão WoW Forever do SuperNovaUI.
+
 ---
 
 ## Comandos
 
 | Comando | O que faz |
 |---|---|
-| `/snui` ou `/supernova` | Ajuda |
+| `/snui` ou `/supernova` | Abre o painel de opções |
+| `/snui help` | Lista os comandos no chat |
 | `/snui status` | Estado de cada módulo do SuperNovaUI |
+| `/snui macro` | Abre a página da Macro por recarga |
 | `/snui compat` | Abre o menu de compatibilidade |
 | `/snui compat status` | Imprime o estado da compatibilidade no chat |
 | `/snui pgf` | Estado do ajuste do Premade Groups Filter |
@@ -185,7 +233,7 @@ Copie **as duas** pastas do zip para `World of Warcraft/_retail_/Interface/AddOn
 - `SuperNovaUI` – o addon e o menu
 - `!SuperNovaUI_Compat` – devolve as funções removidas (sem ela essa parte fica inativa e o menu avisa)
 
-Sem dependências. As configurações ficam em `SuperNovaUIDB`.
+Sem dependências. As configurações ficam em `SuperNovaUIDB`, e cada módulo pode ser desligado no painel.
 
 ## O que ele nunca faz
 
