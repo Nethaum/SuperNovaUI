@@ -2,7 +2,10 @@ local addonName, SN = ...
 
 local DEFAULT_DATABASE = {
     debug = false,
+    language = "auto",
+    firstRunDone = false,
     modules = {},
+    ui = { collapsed = {} },
 }
 
 local DEFAULT_CHARACTER_DATABASE = {
@@ -24,14 +27,15 @@ local function CopyDefaults(defaults, target)
 end
 
 function SN:InitializeDatabase()
-    SuperNovaUIDB = SuperNovaUIDB or {}
-    SuperNovaUICharDB = SuperNovaUICharDB or {}
+    local config = self.config
+    _G[config.database] = _G[config.database] or {}
+    _G[config.characterDatabase] = _G[config.characterDatabase] or {}
 
-    CopyDefaults(DEFAULT_DATABASE, SuperNovaUIDB)
-    CopyDefaults(DEFAULT_CHARACTER_DATABASE, SuperNovaUICharDB)
+    CopyDefaults(DEFAULT_DATABASE, _G[config.database])
+    CopyDefaults(DEFAULT_CHARACTER_DATABASE, _G[config.characterDatabase])
 
-    self.db = SuperNovaUIDB
-    self.charDB = SuperNovaUICharDB
+    self.db = _G[config.database]
+    self.charDB = _G[config.characterDatabase]
 end
 
 -- Modules register their own defaults here before InitializeDatabase runs.

@@ -97,17 +97,20 @@ local SHIMS = {
 
 local states = {}
 
-for _, shim in ipairs(SHIMS) do
-    local state = { name = shim.name, description = shim.description, active = false }
+-- Turned off from the SuperNovaUI panel (Compatibility > Game functions). Saved variables are loaded before this runs.
+local turnedOff = type(_G.SuperNovaUICompatDB) == "table" and _G.SuperNovaUICompatDB.disabled == true
 
-    if shim.isMissing() then
+for _, shim in ipairs(SHIMS) do
+    local state = { name = shim.name, description = shim.description, active = false, disabled = turnedOff }
+
+    if not turnedOff and shim.isMissing() then
         state.active = pcall(shim.install)
     end
 
     tinsert(states, state)
 end
 
--- list of { name, description, active }; active means this addon defined the global
+-- list of { name, description, active, disabled }; active means this addon defined the global
 function Compat:GetShimStates()
     return states
 end

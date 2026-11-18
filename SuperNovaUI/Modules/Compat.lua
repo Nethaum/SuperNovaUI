@@ -12,27 +12,27 @@ local PATCH_FIELD = "X-SuperNovaUI-Patch"
 local KNOWN_ADDONS = {
     {
         name = "tdBattlePetScript",
-        problem = "Original version fails on 12.x: options panel, removed constants and a removed font.",
+        problem = { enUS = "Original version fails on 12.x: options panel, removed constants and a removed font.", ptBR = "A versão original falha no 12.x: painel de opções, constantes removidas e uma fonte removida." },
     },
     {
         name = "tdBattlePetScript_Rematch",
-        problem = "Written for Rematch 4. Needs a Rematch 5 version to attach scripts to teams.",
+        problem = { enUS = "Written for Rematch 4. Needs a Rematch 5 version to attach scripts to teams.", ptBR = "Feito para o Rematch 4. Precisa de uma versão para o Rematch 5 para ligar scripts às equipes." },
     },
     {
         name = "RematchElvUISkin",
-        problem = "Skin for Rematch 4. Does not match the Rematch 5 window.",
+        problem = { enUS = "Skin for Rematch 4. Does not match the Rematch 5 window.", ptBR = "Skin do Rematch 4. Não combina com a janela do Rematch 5." },
     },
     {
         name = "RematchCelestialTournament",
-        problem = "Replaces Rematch 4 internals that no longer exist.",
+        problem = { enUS = "Replaces Rematch 4 internals that no longer exist.", ptBR = "Substitui partes internas do Rematch 4 que não existem mais." },
     },
     {
         name = "RematchNextTarget",
-        problem = "Replaces Rematch 4 internals that no longer exist.",
+        problem = { enUS = "Replaces Rematch 4 internals that no longer exist.", ptBR = "Substitui partes internas do Rematch 4 que não existem mais." },
     },
     {
         name = "Rematch",
-        problem = "5.3.1 raises an error reading NPC names (secret values, patch 12.1).",
+        problem = { enUS = "5.3.1 raises an error reading NPC names (secret values, patch 12.1).", ptBR = "A 5.3.1 dá erro ao ler nomes de NPC (valores secretos, patch 12.1)." },
         -- fixed at runtime by the SuperNovaUI module of this name instead of by a patched file
         fixedByModule = "rematch",
     },
@@ -159,12 +159,90 @@ end
 function Compat:HandleCommand(command)
     if command == "status" then
         self:PrintStatus()
-    elseif self.TogglePanel then
-        self:TogglePanel()
     else
-        self:PrintStatus()
+        SN:OpenPanel(self.name)
     end
 end
+
+-- The page: what each known addon needs, and which fixes are built in.
+local function Text(english, portuguese)
+    return { enUS = english, ptBR = portuguese }
+end
+
+local function Hex(color)
+    return string.format("|cff%02x%02x%02x", color[1] * 255, color[2] * 255, color[3] * 255)
+end
+
+local function BuildPage(module, flow)
+    local W = SN.Widgets
+    local parent = flow.parent
+
+    flow:Add(W.Text(parent, "GameFontNormalHuge", SN:Loc(module.info.name)), 28, 4)
+    flow:Text(SN:Loc(module.info.desc), W.colors.muted)
+
+    flow:Header(SN:Loc(Text("Addons that need a fix", "Addons que precisam de correção")))
+
+    for _, known in ipairs(KNOWN_ADDONS) do
+        local row = W.Text(parent, "GameFontHighlight", "")
+        flow:Add(row, 16, 2, function()
+            local text, color = Text("Not installed", "Não instalado"), W.colors.muted
+
+            for _, state in ipairs(module:GetAddonStates()) do
+                if state.name == known.name then
+                    if state.fixed then
+                        text, color = Text("Fixed", "Corrigido"), W.colors.good
+                    else
+                        text, color = Text("Needs fix", "Precisa de correção"), W.colors.warn
+                    end
+
+                    if not state.enabled then
+                        text = Text(SN:Loc(text) .. ", disabled", SN:Loc(text) .. ", desativado")
+                    end
+                end
+            end
+
+            row:SetText(known.name .. "   -   " .. Hex(color) .. SN:Loc(text) .. "|r")
+        end)
+        flow:Text(SN:Loc(known.problem), W.colors.muted, "GameFontDisableSmall", 12)
+    end
+
+    flow:Text(SN:Loc(Text(
+        "SuperNovaUI never edits other addons' files. For an addon marked \"Needs fix\", look for an updated version on its page (CurseForge, Wago or its website) or ask its author.",
+        "O SuperNovaUI nunca edita os arquivos de outros addons. Para um addon marcado como \"Precisa de correção\", procure uma versão atualizada na página dele (CurseForge, Wago ou o site) ou fale com o autor."
+    )), W.colors.muted)
+
+    flow:Header(SN:Loc(Text("Fixes built in", "Correções embutidas")))
+
+    for _, moduleName in ipairs(SN:GetToggleableModules()) do
+        local row = W.Text(parent, "GameFontHighlight", "")
+        flow:Add(row, 16, 6, function()
+            local status, detail = SN:GetModuleStatus(moduleName)
+            local text = SN:GetModuleDisplayName(moduleName) .. "   -   " .. SN:ColoredStatus(status)
+
+            if detail then
+                text = text .. "   " .. Hex(W.colors.muted) .. "(" .. SN:Loc(detail) .. ")|r"
+            end
+
+            row:SetText(text)
+        end)
+    end
+end
+
+Compat.info = {
+    category = "compat",
+    kind = "core",
+    order = 1,
+    name = { enUS = "Fix status", ptBR = "Estado das correções" },
+    desc = {
+        enUS = "Shows which addons have a known problem with this game version and which fixes are built in.",
+        ptBR = "Mostra quais addons têm um problema conhecido nesta versão do jogo e quais correções já estão embutidas.",
+    },
+    BuildPage = BuildPage,
+    help = {
+        "/snui compat - open the fix status page (addons that need a fix)",
+        "/snui compat status - print the compatibility state in the chat",
+    },
+}
 
 SN:RegisterModuleDefaults("compat", { enabled = true })
 SN:RegisterModule("compat", Compat)

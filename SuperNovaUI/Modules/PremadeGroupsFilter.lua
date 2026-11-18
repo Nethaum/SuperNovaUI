@@ -14,7 +14,8 @@ local addonName, SN = ...
 ]]
 
 local PGFModule = {
-    installed = false,
+    installed = false, -- PGF's functions are wrapped (the wrappers stay for the whole session)
+    running = false,   -- the tweak is on: the wrappers only change PGF's answer while this is true
 }
 
 local PGF_ADDON = "PremadeGroupsFilter"
@@ -54,19 +55,51 @@ function PGFModule:Install()
 
     local hasRemainingSlots = pgf.HasRemainingSlotsForLocalPlayerPartyRoles
     pgf.HasRemainingSlotsForLocalPlayerPartyRoles = function(...)
+        if not PGFModule.running then
+            return hasRemainingSlots(...)
+        end
+
         return hasRemainingSlots(...) and not hasMySpec
     end
 
     if type(pgf.L) == "table" then
-        pgf.L[TOOLTIP_KEY] = TOOLTIP_TEXT
+        self.originalTooltip = pgf.L[TOOLTIP_KEY]
     end
 
     self.installed = true
+    self:ApplyTooltip()
     SN:Debug(self.name, "Party Fit wrapped")
     return true
 end
 
+-- Party Fit's tooltip describes the extra rule only while the tweak is on.
+function PGFModule:ApplyTooltip()
+    local pgf = GetPGF()
+
+    if self.installed and pgf and type(pgf.L) == "table" then
+        pgf.L[TOOLTIP_KEY] = self.running and TOOLTIP_TEXT or self.originalTooltip
+    end
+end
+
+function PGFModule:SetEnabled(enabled)
+    self.running = enabled
+    self:ApplyTooltip()
+end
+
+function PGFModule:GetStatusDetail()
+    if self.installed then
+        return "active"
+    end
+
+    return "warning", {
+        enUS = "Premade Groups Filter is installed but not hooked yet (is it loaded and up to date?)",
+        ptBR = "O Premade Groups Filter está instalado, mas ainda não foi alcançado (está carregado e atualizado?)",
+    }
+end
+
 function PGFModule:Initialize()
+    self.running = true
+
     if self:Install() then
         return
     end
@@ -97,6 +130,22 @@ end
 function PGFModule:HandleCommand()
     self:PrintStatus()
 end
+
+PGFModule.info = {
+    category = "groups",
+    kind = "fix",
+    requiresAddon = PGF_ADDON,
+    order = 1,
+    name = { enUS = "Premade Groups Filter", ptBR = "Premade Groups Filter" },
+    desc = {
+        enUS = "Makes \"Party Fit\" also hide groups that already have your class and specialization.",
+        ptBR = "Faz o \"Party Fit\" também esconder grupos que já têm a sua classe e especialização.",
+    },
+    help = { "/snui pgf - show the Premade Groups Filter tweak (Party Fit) state" },
+    GetStatus = function(module)
+        return module:GetStatusDetail()
+    end,
+}
 
 SN:RegisterModuleDefaults("pgf", { enabled = true })
 SN:RegisterModule("pgf", PGFModule)

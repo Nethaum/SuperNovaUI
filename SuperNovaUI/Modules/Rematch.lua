@@ -14,7 +14,8 @@ local addonName, SN = ...
 ]]
 
 local RematchModule = {
-    installed = false,
+    installed = false, -- Rematch's function is wrapped (the wrapper stays for the whole session)
+    running = false,   -- the fix is on: the wrapper only changes Rematch's behaviour while this is true
 }
 
 local REMATCH_ADDON = "Rematch"
@@ -48,6 +49,10 @@ function RematchModule:Install()
     local unreadable = {}
 
     targetInfo.GetNpcName = function(info, npcID, ...)
+        if not RematchModule.running then
+            return getNpcName(info, npcID, ...)
+        end
+
         local number = GetNpcNumber(npcID)
         if number and unreadable[number] then
             return unreadable[number]
@@ -72,7 +77,13 @@ function RematchModule:Install()
     return true
 end
 
+function RematchModule:SetEnabled(enabled)
+    self.running = enabled
+end
+
 function RematchModule:Initialize()
+    self.running = true
+
     if self:Install() then
         return
     end
@@ -103,6 +114,29 @@ end
 function RematchModule:HandleCommand()
     self:PrintStatus()
 end
+
+RematchModule.info = {
+    category = "pets",
+    kind = "fix",
+    requiresAddon = REMATCH_ADDON,
+    order = 1,
+    name = { enUS = "Rematch", ptBR = "Rematch" },
+    desc = {
+        enUS = "Stops the pet journal from breaking when Rematch cannot read an NPC name (patch 12.1).",
+        ptBR = "Evita que o diário de mascotes quebre quando o Rematch não consegue ler o nome de um NPC (patch 12.1).",
+    },
+    help = { "/snui rematch - show the Rematch fix (NPC names) state" },
+    GetStatus = function(module)
+        if module.installed then
+            return "active"
+        end
+
+        return "warning", {
+            enUS = "Rematch is installed but not hooked yet (is it loaded and up to date?)",
+            ptBR = "O Rematch está instalado, mas ainda não foi alcançado (está carregado e atualizado?)",
+        }
+    end,
+}
 
 SN:RegisterModuleDefaults("rematch", { enabled = true })
 SN:RegisterModule("rematch", RematchModule)

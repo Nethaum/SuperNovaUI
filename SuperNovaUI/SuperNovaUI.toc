@@ -15,12 +15,25 @@
 ## AddonCompartmentFunc: SuperNovaUI_AddonCompartmentFunc
 ## Group: SuperNovaUI
 
+Core\Config.lua
+Core\Locale.lua
 Core\Bootstrap.lua
 Core\Console.lua
 Core\Database.lua
+Core\Registry.lua
+Core\Options.lua
+Core\Profile.lua
+Core\FirstRun.lua
 Core\SlashCommands.lua
 
+Panel\Widgets.lua
+Panel\Page.lua
+Panel\Window.lua
+Panel\Welcome.lua
+Panel\Pages.lua
+
 Modules\Compat.lua
-Modules\CompatPanel.lua
+Modules\Shims.lua
 Modules\PremadeGroupsFilter.lua
 Modules\Rematch.lua
+Modules\CooldownMacro.lua

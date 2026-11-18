@@ -6,6 +6,10 @@ The project focuses on practical interface improvements organized into clear fea
 
 ## Features
 
+### Options panel
+
+`/snui` opens a window with the modules grouped by category on the left (General, Compatibility, Groups and dungeons, Battle pets, ...) and the selected module's page on the right. Every fix is a module you can turn on or off; each one is on by default and only runs when the addon it fixes is installed. The first time the addon loads it asks whether to load all the compatible modules, and the General page can enable or disable them all at any time. The Profile page exports your settings as text and imports them on another character or computer (or in the WoW Forever addon, see below). The window has a dark "deep space" look (a few dim stars along the edges, none behind the text), draws its text with the font file Blizzard ships (Friz Quadrata) whatever a font addon did to the game's fonts, is available in English and Portuguese (Brazil), remembers where you put it (the General page can reset it), shows a tooltip for each module, and can be driven from the keyboard: Up and Down move through the modules, Ctrl+F jumps to the search, Esc closes it.
+
 ### Compatibility
 
 Restores Blizzard globals that were removed while installed addons still call them. The fixes live in the companion addon `!SuperNovaUI_Compat`: the leading `!` makes the game load it before every other addon, which matters for addons that call the removed functions while they are loading. A shim only activates when the global is missing, so it never overrides Blizzard or another addon (it coexists with FixRematch / `!RematchCompat`).
@@ -14,7 +18,7 @@ Restores Blizzard globals that were removed while installed addons still call th
 - `LE_BATTLE_PET_WEATHER`, `LE_BATTLE_PET_ALLY`, `LE_BATTLE_PET_ENEMY` (replaced by `Enum.BattlePetOwner`): fixes the original tdBattlePetScript.
 - Item globals that moved to `C_Item` (`GetItemInfo`, `GetItemInfoInstant`, `GetItemCount`, `GetDetailedItemLevelInfo`, `GetItemSpell`, `IsUsableItem`, ...): fixes addons that still call the old names, such as ClassCodex and CraftInfoAnywhere. Each one is restored only when missing.
 
-The compatibility menu (`/snui compat`) lists which known incompatible addons you have installed (tdBattlePetScript, its Rematch plugin, Rematch ElvUI Skin, RematchCelestialTournament, RematchNextTarget, Rematch) and whether each one is already fixed. A "Tweaks" section shows the state of the Premade Groups Filter tweak (active, disabled, not hooked or not installed). An addon counts as fixed when its `.toc` has the `X-SuperNovaUI-Patch` field (the Rematch fix is checked at runtime instead). Game addons cannot write to other addons' files and SuperNovaUI never edits them; the "How to fix" button only explains what to do (look for an updated version or ask the author).
+The Compatibility > Fix status page (`/snui compat`) lists which known incompatible addons you have installed (tdBattlePetScript, its Rematch plugin, Rematch ElvUI Skin, RematchCelestialTournament, RematchNextTarget, Rematch) and whether each one is already fixed, and which fixes are built in. An addon counts as fixed when its `.toc` has the `X-SuperNovaUI-Patch` field (the Rematch fix is checked at runtime instead). Game addons cannot write to other addons' files and SuperNovaUI never edits them; the page only explains what to do (look for an updated version or ask the author). The shims have their own switch (Compatibility > Game functions); a change there applies after a reload.
 
 Note: patch 12.1 "secret value" restrictions can still make Rematch show "Unknown (npc ID ...)" for some targets. That is a separate issue the shim cannot fix.
 
@@ -26,14 +30,24 @@ With Premade Groups Filter installed, **Party Fit** also hides groups that alrea
 
 Rematch 5.3.1 reads NPC names from a tooltip, and patch 12.1 made that text a "secret value", which raised an error and broke opening the pet journal. SuperNovaUI wraps `Rematch.targetInfo:GetNpcName` while the game runs: when the original fails, the NPC shows as `Unknown (npc id N)`, the label Rematch already uses for names it cannot find. Rematch's own files stay untouched. The real names return when Rematch ships its own fix.
 
+### Macro by cooldown
+
+A macro cannot ask whether a spell is on cooldown; this module can. It watches one spell and keeps one macro in step with it: one text while the spell is ready, another while it recharges, and it switches back by itself when the spell is ready again. You keep a single button on the bar. Set it up in Tools > Macro by cooldown: the spell (name or id), the macro name (created for the character if it does not exist; an existing macro with that name has its text replaced) and the two texts. The page has a **Fill with the druid example** button for WoW Forever: the racial "Sky Vision" while it is ready; on cooldown, shift into Cat Form and use Dash.
+
+A macro can only be changed outside combat, so a cooldown that starts or ends during a fight is applied when the fight ends (until then the button keeps the text it had). The global cooldown (1.5 s or less) is ignored. In Retail 12 the cooldown values can be hidden from addons in combat; the macro is then left as it is. The module does nothing until a spell and both texts are set.
+
+If you use the spell in combat, use two fixed macros instead, one button each (their text never changes, so combat does not matter). Example for the druid: button 1 is `#showtooltip` and `/cast Sky Vision`; button 2 is `#showtooltip`, `/cast [form:3] Dash` and `/cast [noform:3] Cat Form`. The module's page shows this example in the player's language.
+
 ## Commands
 
-- `/snui` or `/supernova` - show help.
+- `/snui` or `/supernova` - open the options panel.
+- `/snui help` - list the commands.
 - `/snui status` - show global SuperNovaUI status.
-- `/snui compat` - open the compatibility menu.
+- `/snui compat` - open the Fix status page.
 - `/snui compat status` - print the compatibility state in the chat.
 - `/snui pgf` - show the Premade Groups Filter tweak state.
 - `/snui rematch` - show the Rematch fix state.
+- `/snui macro` - show the state of the macro by cooldown.
 - `/snui reload` - reload the UI.
 
 ## Installation
