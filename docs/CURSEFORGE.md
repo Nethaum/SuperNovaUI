@@ -4,7 +4,7 @@
 
 Retail only. Tested on the 12.1.5 client (interface 120100 / 120105).
 
-![Options panel](https://media.forgecdn.net/attachments/description/1771235/description_513ee319-4c0a-4fea-be05-078a325edbfa.png)
+![Options panel](https://media.forgecdn.net/attachments/2242/254/retail_018_en-us-png.png)
 
 Type `/snui` to open the **options panel**: every function is a module with its own switch, grouped by category, so you only keep what you want.
 
@@ -140,7 +140,7 @@ MIT. See `LICENSE` inside each addon folder.
 
 Somente Retail. Testado no cliente 12.1.5 (interface 120100 / 120105).
 
-![Painel de opções](https://media.forgecdn.net/attachments/description/1771235/description_513ee319-4c0a-4fea-be05-078a325edbfa.png)
+![Painel de opções](https://media.forgecdn.net/attachments/2242/255/retail_018_pt-br-png.png)
 
 Digite `/snui` para abrir o **painel de opções**: cada função é um módulo com liga/desliga próprio, separado por categoria, para você manter só o que quiser.
 
