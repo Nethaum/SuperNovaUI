@@ -286,6 +286,11 @@ function CooldownMacro:Save(values)
     settings.readyText = values.readyText or ""
     settings.cooldownText = values.cooldownText or ""
 
+    -- Setting it up shows the player wants it: a module that was off only because it had nothing to do turns on.
+    if self:IsConfigured() and not settings.chosen and not SN:IsModuleEnabled(self.name) then
+        SN:SetModuleEnabled(self.name, true, true)
+    end
+
     self.state = nil
     self:Update(true)
 end
@@ -481,6 +486,9 @@ CooldownMacro.info = {
         ptBR = "Mantém uma macro de acordo com a recarga de um feitiço: um texto com o feitiço pronto e outro enquanto ele recarrega. Um botão, dois comportamentos, e a macro volta sozinha.",
     },
     help = { "/snui macro - show the state of the macro by cooldown" },
+    isUseful = function(module)
+        return module:IsConfigured()
+    end,
     BuildPage = BuildPage,
     GetStatus = function(module)
         if not module:IsConfigured() then

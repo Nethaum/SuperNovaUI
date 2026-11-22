@@ -9,6 +9,8 @@ local addonName, SN = ...
             category = "pets",                 -- one of SN.categories
             kind = "fix",                      -- "fix", "compat", "feature" or "core" (a page that cannot be turned off)
             requiresAddon = "Rematch",         -- optional: the module only does something when this addon is installed
+            conflictsWith = { "OtherAddon" },  -- optional: installed addons that already do what the module does
+            isUseful = function(module) end,   -- optional: return false when the module has nothing to do for this player
             name = { enUS = "...", ptBR = "..." },
             desc = { enUS = "...", ptBR = "..." },
             order = 10,                        -- optional, inside its category
@@ -21,8 +23,11 @@ local addonName, SN = ...
     Optional module hooks: Initialize(), SetEnabled(on) (start or stop on the fly), OnToggled(on) (called on every change of
     the switch, also when a reload is needed), OnOptionChanged(key, value), HandleCommand(arg).
 
-    A module is on by default. SN:SetModuleEnabled saves the choice and, when the module cannot start or stop
-    on the fly (no module:SetEnabled), remembers that a reload is needed.
+    A module is on by default, except when it would be useless or would duplicate an addon the player already runs
+    (no addon it needs, a conflicting addon, or isUseful returning false): then it starts off. That is only a default:
+    SN:ResolveDefaultEnabled recomputes it on every load until the player touches the switch, and from that moment
+    (settings.chosen) the choice is kept. SN:SetModuleEnabled saves the choice and, when the module cannot
+    start or stop on the fly (no module:SetEnabled), remembers that a reload is needed.
 ]]
 
 SN.categories = {
@@ -64,6 +69,31 @@ function SN:IsAddonInstalled(addon)
     return false
 end
 
+-- Installed and not disabled in the character's AddOns list (when the game cannot say, installed is enough).
+function SN:IsAddonRunning(addon)
+    if not self:IsAddonInstalled(addon) then
+        return false
+    end
+
+    local player = UnitName and UnitName("player")
+
+    if C_AddOns and C_AddOns.GetAddOnEnableState then
+        local ok, state = pcall(C_AddOns.GetAddOnEnableState, addon, player)
+
+        if ok and type(state) == "number" then
+            return state > 0
+        end
+    elseif GetAddOnEnableState then
+        local ok, state = pcall(GetAddOnEnableState, player, addon)
+
+        if ok and type(state) == "number" then
+            return state > 0
+        end
+    end
+
+    return true
+end
+
 function SN:GetInfo(moduleName)
     local module = self.modules[moduleName]
     return module and module.info or nil
@@ -93,6 +123,66 @@ end
 function SN:IsModuleAvailable(moduleName)
     local info = self:GetInfo(moduleName)
     return info == nil or self:IsAddonInstalled(info.requiresAddon)
+end
+
+-- Addons the player runs that already do what the module does (info.conflictsWith).
+function SN:GetModuleConflicts(moduleName)
+    local info = self:GetInfo(moduleName)
+    local found = {}
+
+    for _, addon in ipairs(info and info.conflictsWith or {}) do
+        if self:IsAddonRunning(addon) then
+            table.insert(found, addon)
+        end
+    end
+
+    return found
+end
+
+-- Should the module start on for this player: it has what it needs, nothing else covers it, and it has work to do.
+function SN:IsModuleRecommended(moduleName)
+    if not self:IsToggleable(moduleName) then
+        return true
+    end
+
+    local info = self:GetInfo(moduleName)
+
+    if not self:IsModuleAvailable(moduleName) or #self:GetModuleConflicts(moduleName) > 0 then
+        return false
+    end
+
+    if info.isUseful then
+        local ok, useful = pcall(info.isUseful, self.modules[moduleName])
+
+        if ok and useful == false then
+            return false
+        end
+    end
+
+    return true
+end
+
+-- A module the player never switched follows the recommendation; one they switched keeps their choice.
+function SN:ResolveDefaultEnabled()
+    for _, moduleName in ipairs(self:GetToggleableModules()) do
+        local settings = self:GetModuleSettings(moduleName)
+
+        if settings and not settings.chosen then
+            settings.enabled = self:IsModuleRecommended(moduleName)
+        end
+    end
+end
+
+function SN:GetRecommendedModules()
+    local list = {}
+
+    for _, moduleName in ipairs(self:GetToggleableModules()) do
+        if self:IsModuleRecommended(moduleName) then
+            table.insert(list, moduleName)
+        end
+    end
+
+    return list
 end
 
 function SN:IsModuleRunnable(moduleName)
@@ -128,6 +218,12 @@ function SN:GetModuleStatus(moduleName)
         return "disabled"
     end
 
+    local conflicts = self:GetModuleConflicts(moduleName)
+
+    if #conflicts > 0 then
+        return "warning", self:T("status_conflict", table.concat(conflicts, ", "))
+    end
+
     if info.GetStatus then
         local ok, status, text = pcall(info.GetStatus, module)
 
@@ -144,7 +240,8 @@ function SN:GetStatusText(status)
 end
 
 -- Turns a module on or off. Returns true when it took effect right away, false when a reload is needed.
-function SN:SetModuleEnabled(moduleName, enabled)
+-- A change the player makes is remembered as their choice; `asDefault` is for the addon's own recommendation.
+function SN:SetModuleEnabled(moduleName, enabled, asDefault)
     if not self:IsToggleable(moduleName) then
         return true
     end
@@ -158,6 +255,10 @@ function SN:SetModuleEnabled(moduleName, enabled)
 
     enabled = enabled and true or false
     settings.enabled = enabled
+
+    if not asDefault then
+        settings.chosen = true
+    end
 
     if module.OnToggled then
         module:OnToggled(enabled)

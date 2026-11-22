@@ -1,8 +1,8 @@
 local addonName, SN = ...
 
 --[[
-    The first-run window: "load all the modules that work with your addons?". Yes keeps everything on; No turns it all
-    off and opens the panel so the player picks.
+    The first-run window: "load the modules that work with your addons?". It lists the recommended modules; Yes keeps
+    them on, No turns everything off and opens the panel so the player picks.
 ]]
 
 local W = SN.Widgets
@@ -11,7 +11,7 @@ local WIDTH = 460
 local MAX_LISTED = 8
 
 function SN:ShowWelcome()
-    local compatible = self:GetCompatibleModules()
+    local compatible = self:GetRecommendedModules()
     local lines = {}
 
     for index, moduleName in ipairs(compatible) do

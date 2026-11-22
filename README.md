@@ -8,7 +8,7 @@ The project focuses on practical interface improvements organized into clear fea
 
 ### Options panel
 
-`/snui` opens a window with the modules grouped by category on the left (General, Compatibility, Groups and dungeons, Battle pets, ...) and the selected module's page on the right. Every fix is a module you can turn on or off; each one is on by default and only runs when the addon it fixes is installed. The first time the addon loads it asks whether to load all the compatible modules, and the General page can enable or disable them all at any time. The Profile page exports your settings as text and imports them on another character or computer (or in the WoW Forever addon, see below). The window has a dark "deep space" look (a few dim stars along the edges, none behind the text), draws its text with the font file Blizzard ships (Friz Quadrata) whatever a font addon did to the game's fonts, is available in English and Portuguese (Brazil), remembers where you put it (the General page can reset it), shows a tooltip for each module, and can be driven from the keyboard: Up and Down move through the modules, Ctrl+F jumps to the search, Esc closes it.
+`/snui` opens a window with the modules grouped by category on the left (General, Compatibility, Groups and dungeons, Battle pets, ...) and the selected module's page on the right. Every fix is a module you can turn on or off. A module starts on, except when it would be useless for you (the addon it fixes is missing, or it has nothing to do yet) or would duplicate an addon you already run: then it starts off, and once you switch it yourself your choice is kept. The first time the addon loads it asks whether to load the recommended modules, and the General page can enable or disable them all at any time. The Profile page exports your settings as text and imports them on another character or computer (or in the WoW Forever addon, see below). The window has a dark "deep space" look (a few dim stars along the edges, none behind the text), draws its text with the font file Blizzard ships (Friz Quadrata) whatever a font addon did to the game's fonts, is available in English and Portuguese (Brazil), remembers where you put it (the General page can reset it), shows a tooltip for each module, and can be driven from the keyboard: Up and Down move through the modules, Ctrl+F jumps to the search, Esc closes it.
 
 ### Compatibility
 
@@ -30,6 +30,10 @@ With Premade Groups Filter installed, **Party Fit** also hides groups that alrea
 
 Rematch 5.3.1 reads NPC names from a tooltip, and patch 12.1 made that text a "secret value", which raised an error and broke opening the pet journal. SuperNovaUI wraps `Rematch.targetInfo:GetNpcName` while the game runs: when the original fails, the NPC shows as `Unknown (npc id N)`, the label Rematch already uses for names it cannot find. Rematch's own files stay untouched. The real names return when Rematch ships its own fix.
 
+### Exploration markers
+
+Marks the regions of the current zone you have not discovered yet, on the world map and on the minimap, with a small ring that disappears when you discover the region. The regions come from the game's own tables (`python tools/gen-exploration.py` rebuilds `Data/Exploration.lua` after a patch); it does nothing next to Leatrix Maps unless you turn it on.
+
 ### Macro by cooldown
 
 A macro cannot ask whether a spell is on cooldown; this module can. It watches one spell and keeps one macro in step with it: one text while the spell is ready, another while it recharges, and it switches back by itself when the spell is ready again. You keep a single button on the bar. Set it up in Tools > Macro by cooldown: the spell (name or id), the macro name (created for the character if it does not exist; an existing macro with that name has its text replaced) and the two texts. The page has a **Fill with the druid example** button for WoW Forever: the racial "Sky Vision" while it is ready; on cooldown, shift into Cat Form and use Dash.
@@ -48,6 +52,7 @@ If you use the spell in combat, use two fixed macros instead, one button each (t
 - `/snui pgf` - show the Premade Groups Filter tweak state.
 - `/snui rematch` - show the Rematch fix state.
 - `/snui macro` - show the state of the macro by cooldown.
+- `/snui explore` - list the regions of the current zone that are still undiscovered.
 - `/snui reload` - reload the UI.
 
 ## Installation

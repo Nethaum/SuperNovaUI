@@ -37,7 +37,7 @@ def lua_files():
     return files
 
 
-def boot(installed=(), locale="enUS", saved=None, login=True, toc_version=None):
+def boot(installed=(), locale="enUS", saved=None, login=True, toc_version=None, before=None):
     """A fresh game: loads every file in .toc order, then fires ADDON_LOADED and (optionally) PLAYER_LOGIN."""
     lua = LuaRuntime(unpack_returned_tuples=True)
     lua.execute(STUB.read_text(encoding="utf-8"))
@@ -52,6 +52,8 @@ def boot(installed=(), locale="enUS", saved=None, login=True, toc_version=None):
     lua.execute("SN = {}")
     for path in lua_files():
         lua.execute(f'STUB.load("{path.as_posix()}", "{ADDON_NAME}", SN)')
+    if before:
+        lua.execute(before)  # e.g. register a module of the test's own
     lua.execute(f'SN.eventFrame.__scripts.OnEvent(SN.eventFrame, "ADDON_LOADED", "{ADDON_NAME}")')
     if login:
         lua.execute('SN.eventFrame.__scripts.OnEvent(SN.eventFrame, "PLAYER_LOGIN")')
@@ -106,7 +108,10 @@ def modules_start_only_when_their_addon_is_installed():
     required_addons = [lua.eval(f'SN:GetInfo("{n}").requiresAddon') for n in names]
     lua = boot(installed=[a for a in required_addons if a], login=False)
     for name in names:
-        assert lua.eval(f'SN:IsModuleActive("{name}")') is True, f"{name} should be on by default when its addon is installed"
+        recommended = lua.eval(f'SN:IsModuleRecommended("{name}")')
+        assert lua.eval(f'SN:IsModuleActive("{name}")') is recommended, f"{name} should start only when it is recommended"
+        if lua.eval(f'SN:GetInfo("{name}").requiresAddon') and not lua.eval(f'SN:GetInfo("{name}").isUseful'):
+            assert recommended is True, f"{name} should be on by default when its addon is installed"
 
 
 @test
@@ -125,13 +130,149 @@ def welcome_question_yes_keeps_modules_on():
     if not names:
         return
     lua = boot(installed=[a for a in required if a])
+    if lua.eval("#SN:GetRecommendedModules()") == 0:
+        return  # nothing to offer (the WoW Forever addon has only the macro, which starts off)
     assert lua.eval("SN.welcome ~= nil and SN.welcome:IsShown()"), "the first-run question should appear"
     lua.execute('STUB.fire(STUB.findButton(SN:T("welcome_yes")), "OnClick")')
     assert lua.eval("SN.db.firstRunDone") is True
     assert lua.eval("SN.welcome:IsShown()") is False
     assert lua.eval("SN.panel == nil or not SN.panel:IsShown()")
     for name in names:
-        assert lua.eval(f'SN:IsModuleEnabled("{name}")') is True
+        assert lua.eval(f'SN:IsModuleEnabled("{name}")') is lua.eval(f'SN:IsModuleRecommended("{name}")')
+
+
+DUP_MODULE = """
+    SN:RegisterModuleDefaults("dup", { enabled = true })
+    SN:RegisterModule("dup", { info = { category = "tools", kind = "feature", name = "Dup", desc = "Does what Other does",
+        conflictsWith = { "OtherAddon" }, }, SetEnabled = function() end })
+    SN:RegisterModuleDefaults("idle", { enabled = true })
+    SN:RegisterModule("idle", { info = { category = "tools", kind = "feature", name = "Idle", desc = "Nothing to do",
+        isUseful = function() return SN_IDLE_USEFUL == true end } })
+"""
+
+
+@test
+def a_module_that_duplicates_another_addon_starts_off():
+    lua = boot(installed=["OtherAddon"], before=DUP_MODULE)
+    assert lua.eval('SN:IsModuleEnabled("dup")') is False
+    assert lua.eval('SN:IsModuleActive("dup")') is False
+    assert lua.eval('SN:IsModuleRecommended("dup")') is False
+    lua = boot(installed=[], before=DUP_MODULE)
+    assert lua.eval('SN:IsModuleEnabled("dup")') is True, "nothing else does the job, so it starts on"
+
+
+@test
+def an_addon_that_is_installed_but_switched_off_is_no_conflict():
+    lua = boot(installed=["OtherAddon"], before=DUP_MODULE + 'STUB.addonDisabled = { OtherAddon = true }')
+    assert lua.eval('SN:IsModuleEnabled("dup")') is True
+
+
+@test
+def a_module_with_nothing_to_do_starts_off():
+    lua = boot(before=DUP_MODULE)
+    assert lua.eval('SN:IsModuleEnabled("idle")') is False
+    lua = boot(before=DUP_MODULE.replace("SN:RegisterModuleDefaults(\"idle\"", "SN_IDLE_USEFUL = true SN:RegisterModuleDefaults(\"idle\""))
+    assert lua.eval('SN:IsModuleEnabled("idle")') is True
+
+
+@test
+def the_default_follows_the_situation_until_the_player_chooses():
+    saved = "SuperNovaUIDB = { modules = { dup = { enabled = false } } }"
+    lua = boot(installed=[], before=DUP_MODULE, saved=saved)
+    assert lua.eval('SN:IsModuleEnabled("dup")') is True, "never switched by the player: it follows the recommendation"
+    lua = boot(installed=["OtherAddon"], before=DUP_MODULE)
+    lua.execute('SN:SetModuleEnabled("dup", true)')
+    assert lua.eval('SN:GetModuleSettings("dup").chosen') is True
+    assert lua.eval('(SN:GetModuleStatus("dup"))') == "warning", "turned on against a conflict: say so, but obey"
+    saved = "SuperNovaUIDB = { modules = { dup = { enabled = true, chosen = true } } }"
+    lua = boot(installed=["OtherAddon"], before=DUP_MODULE, saved=saved)
+    assert lua.eval('SN:IsModuleEnabled("dup")') is True, "what the player chose is kept"
+    assert lua.eval('SN:IsModuleActive("dup")') is True
+
+
+@test
+def settings_saved_before_the_policy_are_kept_as_the_players():
+    saved = "SuperNovaUIDB = { firstRunDone = true, modules = { dup = { enabled = true } } }"
+    lua = boot(installed=["OtherAddon"], before=DUP_MODULE, saved=saved)
+    assert lua.eval('SN:IsModuleEnabled("dup")') is True
+    assert lua.eval('SN:GetModuleSettings("dup").chosen') is True
+
+
+@test
+def welcome_question_yes_does_not_turn_on_what_starts_off():
+    lua = boot(installed=["OtherAddon"], before=DUP_MODULE)
+    lua.execute('SN.AnswerFirstRun(SN, true)')
+    assert lua.eval('SN:IsModuleEnabled("dup")') is False
+    assert lua.eval('SN:IsModuleEnabled("idle")') is False
+    lines = lua.eval('table.concat((function() local t = {} for _, n in ipairs(SN:GetRecommendedModules()) do t[#t+1] = n end return t end)(), ",")')
+    assert "dup" not in lines and "idle" not in lines
+
+
+EXPLORATION_GAME = """
+    SN.ExplorationData = { [1] = { { 10, 20, 30, 40, 0.2, 0.3, 5 }, { 50, 60, 70, 80, 0.6, 0.7, 6 } } }
+    STUB.explored = { { offsetX = 10, offsetY = 20, textureWidth = 30, textureHeight = 40 } }
+    C_Map = {
+        GetBestMapForUnit = function() return 1 end,
+        GetPlayerMapPosition = function() return { x = 0.5, y = 0.5 } end,
+        GetAreaInfo = function(id) return "Area " .. id end,
+    }
+    C_MapExplorationInfo = { GetExploredMapTextures = function() return STUB.explored end }
+"""
+
+
+@test
+def exploration_markers_cover_only_the_regions_without_a_discovery():
+    lua = boot(before=EXPLORATION_GAME)
+    assert lua.eval('SN:IsModuleEnabled("explore")') is True and lua.eval('SN:IsModuleActive("explore")') is True
+    assert lua.eval('#SN.modules.explore:GetUndiscovered(1)') == 1
+    assert lua.eval('SN.modules.explore:GetUndiscovered(1)[1][7]') == 6, "the region without a fog piece in the explored list"
+    assert lua.eval('SN.modules.explore:GetUndiscovered(99)') is None, "a map the game gives no regions for"
+    assert lua.eval('SN.modules.explore:GetAreaName(6)') == "Area 6"
+    # discovering the second region: the list is read again after a few seconds, or at once on an exploration event
+    lua.execute("STUB.explored[2] = { offsetX = 50, offsetY = 60, textureWidth = 70, textureHeight = 80 }")
+    assert lua.eval('#SN.modules.explore:GetUndiscovered(1)') == 1, "the read is reused for a moment"
+    lua.execute("STUB.now = STUB.now + 10")
+    assert lua.eval('#SN.modules.explore:GetUndiscovered(1)') == 0
+
+
+@test
+def exploration_markers_start_off_where_they_cannot_work_or_would_duplicate_leatrix_maps():
+    assert boot().eval('SN:IsModuleEnabled("explore")') is False, "no map API (stand-in game): nothing to do"
+    lua = boot(installed=["Leatrix_Maps"], before=EXPLORATION_GAME)
+    assert lua.eval('SN:IsModuleEnabled("explore")') is False
+    assert lua.eval('SN:IsModuleActive("explore")') is False
+    lua.execute('SN:SetModuleEnabled("explore", true)')
+    assert lua.eval('SN:IsModuleActive("explore")') is True, "the player can still turn it on"
+    assert lua.eval('SN:GetModuleSettings("explore").chosen') is True
+
+
+@test
+def exploration_marker_icon_exists_and_the_module_points_to_it():
+    import struct
+    lua = boot(before=EXPLORATION_GAME)
+    path = ADDON_DIR / "Media" / "Icons" / "Unexplored.tga"
+    assert path.exists(), "the marker icon is missing"
+    header = path.read_bytes()[:18]
+    width, height, bits = struct.unpack("<HHB", header[12:17])
+    assert (width & (width - 1)) == 0 and (height & (height - 1)) == 0 and bits == 32, "a power-of-two 32 bit texture"
+    assert (ADDON_DIR / "Media" / "Icons" / "SuperNovaUI.tga").exists()
+    assert lua.eval('(SN.config.icon:gsub("SuperNovaUI$", "Unexplored"))').endswith("\\Icons\\Unexplored")
+
+
+@test
+def exploration_markers_follow_the_direction_the_minimap_faces():
+    lua = boot(before=EXPLORATION_GAME)
+    project = "SN.modules.explore.Project"
+
+    def at(east, north, rotates, facing):
+        x, y = lua.eval(f"{project}({east}, {north}, {rotates}, {facing})")
+        return round(x, 6) + 0.0, round(y, 6) + 0.0
+
+    assert at(100, 50, "false", 1.234) == (100.0, 50.0), "a fixed minimap keeps north at the top"
+    assert at(100, 50, "true", 0) == (100.0, 50.0)
+    assert at(-1, 0, "true", "math.pi / 2") == (0.0, 1.0), "facing west: a point to the west is straight ahead"
+    assert at(0, 1, "true", "math.pi") == (0.0, -1.0), "facing south: a point to the north is behind"
+    assert at(1, 0, "true", "-math.pi / 2") == (0.0, 1.0), "facing east: a point to the east is straight ahead"
 
 
 @test
@@ -142,7 +283,10 @@ def welcome_question_no_turns_everything_off_and_opens_the_panel():
     if not names:
         return
     lua = boot(installed=[a for a in required if a])
-    lua.execute('STUB.fire(STUB.findButton(SN:T("welcome_no")), "OnClick")')
+    if lua.eval("SN.welcome == nil"):
+        lua.execute("SN:AnswerFirstRun(false)")
+    else:
+        lua.execute('STUB.fire(STUB.findButton(SN:T("welcome_no")), "OnClick")')
     assert lua.eval("SN.db.firstRunDone") is True
     for name in names:
         assert lua.eval(f'SN:IsModuleEnabled("{name}")') is False
@@ -615,6 +759,7 @@ def toggle_tooltip_shows_the_option_description():
 # --- Macro by cooldown ---------------------------------------------------------------------------------------------
 
 MACRO_SETUP = """
+    SN:SetModuleEnabled("macro", true) -- the player turns it on
     STUB.spellNames[1259686] = "Sky Vision"
     STUB.spellNames[1850] = "Dash"
     STUB.spellNames[768] = "Cat Form"
@@ -639,11 +784,14 @@ def macro_body(lua):
 
 
 @test
-def macro_by_cooldown_is_on_by_default_but_does_nothing_until_set_up():
+def macro_by_cooldown_starts_off_until_a_spell_is_set():
     lua = boot()
     assert has_module(lua, "macro")
-    assert lua.eval('SN:IsModuleActive("macro")') is True
+    assert lua.eval('SN:IsModuleActive("macro")') is False, "nothing to do yet, so it starts off"
+    assert lua.eval('SN:IsModuleEnabled("macro")') is False
     assert lua.eval("#STUB.macros") == 0, "no macro may be created before the player chooses a spell"
+    lua.execute('SN:SetModuleEnabled("macro", true)')
+    assert lua.eval('SN:IsModuleActive("macro")') is True
     assert lua.eval('(SN:GetModuleStatus("macro"))') == "warning"
 
 
@@ -729,11 +877,14 @@ def macro_stops_when_the_character_has_no_room():
 def macro_page_example_and_save_buttons_work():
     lua = boot()
     lua.execute('STUB.spellNames[1259686] = "Sky Vision"; STUB.spellNames[1850] = "Dash"; STUB.spellNames[768] = "Cat Form"')
-    lua.execute('local m = SN.modules.macro; m.frame.__scripts.OnEvent(m.frame, "PLAYER_ENTERING_WORLD")')
     lua.execute('STUB.cooldowns["Sky Vision"] = { 0, 0 }')
     lua.execute('SN:OpenPanel("macro")')
+    assert lua.eval('SN:IsModuleEnabled("macro")') is False
     lua.execute('STUB.fire(STUB.findButton("Fill with the druid example"), "OnClick")')
     lua.execute('STUB.fire(STUB.findButton("Save and apply"), "OnClick")')
+    assert lua.eval('SN:IsModuleEnabled("macro")') is True, "setting it up turns on a module that only started off for lack of work"
+    assert lua.eval('SN:GetModuleSettings("macro").chosen') is None, "that is not the player's switch yet"
+    lua.execute('local m = SN.modules.macro; m.frame.__scripts.OnEvent(m.frame, "PLAYER_ENTERING_WORLD")')
     assert lua.eval("STUB.macros[1].name") == "SNUI Cooldown"
     assert macro_body(lua) == "#showtooltip\n/cast Sky Vision"
     lua.execute('STUB.cooldowns["Sky Vision"] = { 100, 120 }')
@@ -902,12 +1053,14 @@ def every_icon_exists_where_it_is_pointed_to():
 
 @test
 def welcome_question_opens_above_the_panel_and_its_button_fits_its_text():
-    lua = boot()
+    lua = boot(installed=["PremadeGroupsFilter", "Rematch"])
     lua.execute('SN:OpenPanel("general")')
     assert lua.eval("SN.panel:GetFrameStrata()") == "DIALOG"
     button = lua.eval('STUB.findButton(SN:T("ask_again"))')
     assert button is not None and lua.eval('STUB.findButton(SN:T("ask_again")):GetWidth()') >= 320, "the long label needs a wide button"
     lua.execute('STUB.fire(STUB.findButton(SN:T("ask_again")), "OnClick")')
+    if lua.eval("SN.welcome == nil"):
+        return  # nothing recommended to ask about (the WoW Forever addon)
     order = {"BACKGROUND": 1, "LOW": 2, "MEDIUM": 3, "HIGH": 4, "DIALOG": 5, "FULLSCREEN": 6, "FULLSCREEN_DIALOG": 7, "TOOLTIP": 8}
     welcome = order[lua.eval("SN.welcome:GetFrameStrata()")]
     panel = order[lua.eval("SN.panel:GetFrameStrata()")]

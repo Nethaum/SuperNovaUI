@@ -31,6 +31,19 @@ function SN:InitializeDatabase()
     _G[config.database] = _G[config.database] or {}
     _G[config.characterDatabase] = _G[config.characterDatabase] or {}
 
+    -- Saved before modules could start off by default: what the player already had stays as it is.
+    local saved = _G[config.database]
+
+    if saved.firstRunDone and saved.policyVersion == nil and type(saved.modules) == "table" then
+        for _, settings in pairs(saved.modules) do
+            if type(settings) == "table" and settings.chosen == nil then
+                settings.chosen = true
+            end
+        end
+    end
+
+    saved.policyVersion = 1
+
     CopyDefaults(DEFAULT_DATABASE, _G[config.database])
     CopyDefaults(DEFAULT_CHARACTER_DATABASE, _G[config.characterDatabase])
 

@@ -58,6 +58,7 @@ function SN:HandleAddonLoaded(loadedAddonName)
     end
 
     self:InitializeDatabase()
+    self:ResolveDefaultEnabled()
     self:UpdateLocale(self.db.language)
     self:RegisterSlashCommands()
     self:InitializeModules()

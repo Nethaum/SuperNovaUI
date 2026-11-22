@@ -17,8 +17,18 @@ and the panel, the on/off switch, the status dot and the profile export all come
 
 - Kinds: `fix` (repairs another addon), `compat` (restores something the game removed), `feature`, and `core` (a page that
   has no switch: General, Profile, Debug).
-- A module is on by default and only starts when the addon it needs is installed. The first time the addon loads it asks
-  whether to load all compatible modules; the General page can enable or disable all of them at any time.
+- A module is on by default, except when it would be useless or would duplicate something the player already runs: then it
+  starts **off**. A module says so in `module.info`: `requiresAddon` (the addon it works on is missing), `conflictsWith`
+  (addons that are installed and not disabled and already do the same thing) and `isUseful(module)` (returns false when it has nothing
+  to do yet). `SN:IsModuleRecommended` joins these, and `SN:ResolveDefaultEnabled` (at load) sets `enabled` from it for every
+  module the player has never switched. The first time the player flips a module's switch (or answers "no" to the first-run
+  question, or uses Enable all / Disable all, or imports a profile) the module gets `chosen = true` and from then on its state is
+  never touched again; until then it follows the situation on every load (a module that was off for lack of an addon turns
+  on by itself once the addon is installed). A module that is on although something conflicts shows a warning in its status. Settings saved before this rule
+  (`firstRunDone` and no `policyVersion`) are marked `chosen`, so nobody's setup changes. Every new module must declare its
+  own conflicts and usefulness this way; never force `enabled = true`. The first time the addon loads it asks
+  whether to load the recommended modules (it lists only those; none recommended, no question); the General page can enable
+  or disable all of them at any time.
 - A module that cannot start or stop on the fly (no `module:SetEnabled`) asks for a reload; the window shows a banner. PGF and Rematch can: their wrappers stay installed and only change behaviour while the module is on. The shims cannot (they are defined while the game loads), so their switch is saved in `SuperNovaUICompatDB`, which the companion addon reads at load.
 - Profiles are text (`SNUI1:<checksum>:<base64>`) read by our own parser: nothing is run, and only known modules and valid
   option values are kept.
@@ -27,6 +37,21 @@ and the panel, the on/off switch, the status dot and the profile export all come
 - `Core/` and `Panel/` are shared with the WoW Forever addon: edit them here and run `python tools/sync-shared.py`
   (`--check` to compare). Only `Core/Config.lua` differs.
 - `Modules/CooldownMacro.lua` (module `macro`, no required addon) is also shared with Forever. It reads one spell's cooldown (`C_Spell.GetSpellCooldown` or `GetSpellCooldown`; anything of 1.5 s or less is the global cooldown; a hidden value in Retail 12 raises on comparison and counts as unknown) and, on `SPELL_UPDATE_COOLDOWN`, `PLAYER_REGEN_ENABLED`, `PLAYER_ENTERING_WORLD` and `SPELLS_CHANGED`, writes the "ready" or "cooldown" text into one character macro (`EditMacro`, or `CreateMacro` when it does not exist). `EditMacro` and `CreateMacro` are blocked in combat, so a change is remembered (`blocked`) and applied when the fight ends. The game reports when a cooldown starts or changes but not when it ends, so the end it reported (start + duration, which already include talents and anything Blizzard changes; no duration is written in the addon) is remembered in `watching` and one `C_Timer.After` look is scheduled for that moment (`WatchEnd`). If the cooldown moves, the game reports it, the end changes and the look is rescheduled (a token drops the old one); nothing runs on every frame or on a fixed interval, and a ready spell schedules nothing. It does not touch macros before `PLAYER_ENTERING_WORLD` (before that the macro list is empty and it would create a duplicate). Its settings (spell, macro name, two texts) are saved in the module's account settings by its own page and are not part of a profile export.
+- `Modules/Exploration.lua` (module `explore`, category Interface, no required addon) is shared with Forever and marks the
+  regions of the current zone that are not discovered yet, on the world map and on the minimap. `Data/Exploration.lua` (one
+  per addon, **generated** by `python tools/gen-exploration.py` from wago.tools exports of `WorldMapOverlay`, `UiMapXMapArt`,
+  `UiMapArt` and `UiMapArtStyleLayer`; run it again after a patch with the new build numbers) lists, per zone map, every region:
+  the fog piece (`offsetX`, `offsetY`, `textureWidth`, `textureHeight`) the game draws when it is discovered, the middle of the
+  region already divided by the map art's size, and the area id. A region is undiscovered when its fog piece is not in
+  `C_MapExplorationInfo.GetExploredMapTextures(uiMapID)` (read again after 3 seconds or on an exploration/zone event; a hidden
+  value in Retail 12 is treated as missing). World map markers are frames on `WorldMapFrame:GetCanvas()` scaled the other way
+  from the canvas so they keep their size, redrawn when the map, its zoom or its visibility changes. Minimap markers are placed
+  from the distance to the player in yards (`C_Map.GetMapWorldSize`, the minimap radius in yards from
+  `C_Minimap.GetViewRadius`), turned by `GetPlayerFacing` when `rotateMinimap` is on, square or round by `GetMinimapShape` (a
+  client without that function is round); a throttled `OnUpdate` (10 per second) exists only while the module is on, the minimap
+  option is on and the zone has a marker to move. It conflicts with `Leatrix_Maps` (which uncovers the whole map). Both clients were
+  probed in game (`SNProbe`): `C_MapExplorationInfo`, `GetExploredAreaIDsAtPosition`, `GetMapWorldSize` and
+  `C_Minimap.GetViewRadius` exist in both; `GetMinimapShape` only in Retail.
 - `python tests/run_tests.py [addon folder]` runs the Lua outside the game with a stand-in for the WoW API (needs
   `pip install lupa`).
 

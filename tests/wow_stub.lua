@@ -107,6 +107,7 @@ function ReloadUI() STUB.reloaded = STUB.reloaded + 1 end
 function GetBuildInfo() return "1.0", "1", "Jan 1 2026", STUB.tocVersion or 120105 end
 C_AddOns = {
     DoesAddOnExist = function(name) return STUB.installed[name] == true end,
+    GetAddOnEnableState = function(name) return (STUB.addonDisabled and STUB.addonDisabled[name]) and 0 or 2 end,
     GetAddOnMetadata = function() return "9.9.9" end,
 }
 
