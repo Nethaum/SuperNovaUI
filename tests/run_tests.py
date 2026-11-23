@@ -314,6 +314,437 @@ if CONVERGENCE_FILE.exists():  # the Elemental Convergence markers exist only in
         assert broken.eval(f"#{mod}:GetPoints(1411)") == 4, "a failing partner never breaks the module"
 
 
+GOALS_FILE = ADDON_DIR / "Modules" / "Forever" / "Goals.lua"
+GOALS_GAME = """
+    TradeSkillFrame = CreateFrame("Frame", "TradeSkillFrame")
+    STUB.profession = { "Cooking", 142, 150 }
+    STUB.recipes = {
+        { "Basic Spells", "header" },
+        { "Spiced Wolf Meat", "easy", 5 },
+        { "Goblin Deviled Clams", "medium", 0 },
+        { "Mithril Head Trout", "optimal", 0 },
+        { "Slitherskin Mackerel", "trivial", 9 },
+        { "Roasted Boar Meat", "optimal", 3 },
+    }
+    GetTradeSkillLine = function() return unpack(STUB.profession) end
+    GetNumTradeSkills = function() return #STUB.recipes end
+    GetTradeSkillInfo = function(i) return unpack(STUB.recipes[i]) end
+"""
+
+if GOALS_FILE.exists():  # the profession goal exists only in the WoW Forever addon
+
+    @test
+    def profession_goal_names_the_recipe_to_make_and_how_far_the_goal_is():
+        lua = boot(before=GOALS_GAME)
+        mod = "SN.modules.goal"
+        assert lua.eval(f"{mod}:GetSummary().goal") is None, "no goal yet"
+        assert lua.eval(f'{mod}:SetGoal("Cooking", "180", "")') is True
+        assert lua.eval(f"{mod}:GetSummary().missing") == 38
+        assert lua.eval(f"{mod}:GetSummary().recipe") == "Roasted Boar Meat", "best colour the bags can pay for"
+        lua.execute("STUB.recipes[6][3] = 0")
+        assert lua.eval(f"{mod}:GetSummary().recipe") == "Spiced Wolf Meat", "a lower colour that can be paid beats one that cannot"
+        lua.execute("STUB.recipes[2][3] = 0 STUB.recipes[3][3] = 0 STUB.recipes[4][3] = 0 STUB.recipes[6][3] = 0 STUB.recipes[3] = nil")
+        lua.execute("STUB.recipes = { { 'Mithril Head Trout', 'optimal', 0 }, { 'Slitherskin Mackerel', 'trivial', 9 } }")
+        assert lua.eval(f"{mod}:GetSummary().recipe") == "Mithril Head Trout", "nothing payable: show what to buy"
+        assert lua.eval(f"{mod}:GetSummary().available") == 0
+
+    @test
+    def profession_goal_reached_stops_suggesting_and_says_it_once():
+        lua = boot(before=GOALS_GAME)
+        mod = "SN.modules.goal"
+        lua.execute(f'{mod}:SetGoal("Cooking", 150, "")')
+        lua.execute('STUB.profession = { "Cooking", 150, 150 }')
+        before = lua.eval("#STUB.printed")
+        lua.execute(f"{mod}:Update() {mod}:Update()")
+        assert lua.eval(f"{mod}:GetSummary().reached") is True
+        assert lua.eval(f"{mod}:GetSummary().recipe") is None
+        assert lua.eval("#STUB.printed") == before + 1, "the goal is announced once"
+
+    @test
+    def profession_goal_warns_when_the_rank_must_be_trained_first():
+        lua = boot(before=GOALS_GAME)
+        mod = "SN.modules.goal"
+        lua.execute(f'{mod}:SetGoal("Cooking", 180, "")')
+        lua.execute('STUB.profession = { "Cooking", 150, 150 }')
+        assert lua.eval(f"{mod}:GetSummary().needsHigherRank") is True
+
+    @test
+    def profession_goal_rejects_nonsense_and_empty_removes_it():
+        lua = boot(before=GOALS_GAME)
+        mod = "SN.modules.goal"
+        for bad in ("abc", "-5", "1.5", "301", "99999"):
+            assert lua.eval(f'({mod}:SetGoal("Cooking", "{bad}", ""))') is False, bad
+        assert lua.eval(f'({mod}:SetGoal("", "10", ""))') is False
+        lua.execute(f'{mod}:SetGoal("Cooking", "180", "")')
+        assert lua.eval(f"{mod}:HasGoal()") is True
+        lua.execute(f'{mod}:SetGoal("Cooking", "", "")')
+        assert lua.eval(f"{mod}:HasGoal()") is False
+        for good in (1, 2, 300):
+            assert lua.eval(f'({mod}:SetGoal("Cooking", "{good}", ""))') is True, good
+
+    @test
+    def profession_goal_starts_off_until_a_goal_exists_and_turns_on_with_it():
+        lua = boot(before=GOALS_GAME)
+        assert lua.eval('SN:IsModuleEnabled("goal")') is False
+        lua.execute('SN.modules.goal:SetGoal("Cooking", 180, "")')
+        assert lua.eval('SN:IsModuleEnabled("goal")') is True and lua.eval('SN:IsModuleActive("goal")') is True
+        assert boot().eval('SN.modules.goal:GetSummary()') is None, "no profession API: nothing to say, no error"
+
+    @test
+    def profession_goal_works_with_the_modern_api_and_survives_an_unknown_event():
+        lua = boot(before="""
+            ProfessionsFrame = CreateFrame("Frame", "ProfessionsFrame")
+            C_TradeSkillUI = {
+                GetBaseProfessionInfo = function() return { professionName = "Culinaria", skillLevel = 100, maxSkillLevel = 150 } end,
+                GetAllRecipeIDs = function() return { 1, 2, 3 } end,
+                GetRecipeInfo = function(id)
+                    return ({ { name = "A", relativeDifficulty = 2, numAvailable = 4, learned = true },
+                              { name = "B", relativeDifficulty = 0, numAvailable = 0, learned = true },
+                              { name = "C", relativeDifficulty = 1, numAvailable = 9, learned = false } })[id]
+                end,
+            }
+        """)
+        mod = "SN.modules.goal"
+        lua.execute('SN.modules.goal.listener = CreateFrame("Frame") SN.modules.goal.listener.RegisterEvent = function() error("unknown event") end')
+        lua.execute('SN:SetModuleEnabled("goal", false) SN:SetModuleEnabled("goal", true)')  # must not raise
+        assert lua.eval('SN:IsModuleActive("goal")') is True
+        lua.execute(f'{mod}:SetGoal("Culinaria", 120, "")')
+        assert lua.eval(f"{mod}:GetSummary().missing") == 20
+        assert lua.eval(f"{mod}:GetSummary().recipe") == "A", "B is better but not payable, C is not learned"
+
+    @test
+    def profession_goal_lists_the_characters_professions_without_opening_a_window():
+        lua = boot(before="""
+            GetProfessions = function() return 1, nil, nil, nil, 2 end
+            GetProfessionInfo = function(i) return ({ "Alquimia", "Culinaria" })[i], 0, 10, 300 end
+        """)
+        lua.execute('SN:SetModuleEnabled("goal", true)')
+        open_every_page(lua)
+        assert lua.eval('SN.modules.goal:GetSeen().Culinaria') == 300
+        assert lua.eval('SN.modules.goal:GetSeen().Alquimia') == 300
+        assert lua.eval('(SN:GetModuleStatus("goal"))') == "active", "no goal yet is not a problem"
+
+    @test
+    def profession_goal_save_button_confirms_on_the_button_itself_and_goes_back():
+        lua = boot(before="""
+            GetProfessions = function() return 1 end
+            GetProfessionInfo = function() return "Cooking", 0, 10, 300 end
+        """)
+        lua.execute('SN:SetModuleEnabled("goal", true) SN:OpenPanel("general") SN:SelectModule("goal")')
+        lua.execute('STUB.button = STUB.findButton("Save goal - Cooking")')
+        assert lua.eval("STUB.button ~= nil"), "the page has the save button"
+        lua.execute("STUB.fire(STUB.button, 'OnClick')")
+        assert lua.eval("STUB.button.label.__text") == "Saved!", "the button itself says it saved"
+        lua.execute("STUB.advance(0.5)")
+        assert lua.eval("STUB.button.label.__text") == "Saved!", "it stays long enough to be seen"
+        lua.execute("STUB.fire(STUB.button, 'OnClick') STUB.advance(0.8)")
+        assert lua.eval("STUB.button.label.__text") == "Saved!", "a second click starts it over"
+        lua.execute("for _ = 1, 80 do STUB.advance(0.05) end")  # the clock moves in small steps, like the game's
+        assert lua.eval("STUB.button.label.__text") == "Save goal - Cooking", "the text comes back by itself"
+
+    FIND_GAME = GOALS_GAME + """
+        ITEM_MIN_SKILL = "Requer %s (%d)"
+        STUB.vendor = { "|cff1eff00|Hitem:1:::|h[Receita: Vitamina Calcificada]|h|r", "|cffffffff|Hitem:2:::|h[Pao]|h|r" }
+        GetMerchantNumItems = function() return #STUB.vendor end
+        GetMerchantItemLink = function(i) return STUB.vendor[i] end
+        C_TooltipInfo = { GetHyperlink = function(link)
+            if link:find("Vitamina") then return { lines = { { leftText = "Receita: Vitamina Calcificada" }, { leftText = "Requer Culinária (180)" } } } end
+            return { lines = { { leftText = "Pao" } } }
+        end }
+    """
+
+    @test
+    def profession_goal_finds_the_level_from_the_recipe_name():
+        lua = boot(before=FIND_GAME)
+        mod = "SN.modules.goal"
+        assert lua.eval(f'({mod}:FindRecipeLevel("vitamina calcificada"))') == 180
+        assert lua.eval(f'({mod}:FindRecipeLevel("vitamina calcificada", "Culinária"))') == 180
+        assert lua.eval(f'({mod}:FindRecipeLevel("vitamina calcificada", "Cooking"))') is None, "another profession's recipe never counts"
+        assert lua.eval(f'({mod}:FindRecipeLevel("pao"))') is None, "no requirement in the tooltip"
+        assert lua.eval(f'({mod}:FindRecipeLevel("receita que nao existe"))') is None
+        lua.execute("STUB.vendor = {}")
+        assert lua.eval(f'({mod}:FindRecipeLevel("vitamina calcificada"))') is None, "out of sight: nothing is invented"
+
+    @test
+    def profession_goal_accepts_only_recipe_names_the_game_can_confirm():
+        lua = boot(before=FIND_GAME.replace('"Cooking", 142, 150', '"Culinária", 142, 225'))
+        mod = "SN.modules.goal"
+        # the vendor shows the recipe: the level comes from it
+        assert lua.eval(f'({mod}:SetGoal("Culinária", "", "Vitamina Calcificada"))') is True
+        assert lua.eval(f"{mod}:GetSummary().goal") == 180
+        assert lua.eval(f"{mod}:GetSummary().label") == "Vitamina Calcificada"
+        # a typo is refused and changes nothing
+        ok, why = lua.eval(f'{mod}:SetGoal("Culinária", "200", "Vitamina Calcificda")')
+        assert (ok, why) == (False, "recipe")
+        assert lua.eval(f"{mod}:GetSummary().goal") == 180
+        # a recipe the character knows is confirmed by the profession window, and then the level must be typed
+        lua.execute('STUB.recipes[#STUB.recipes + 1] = { "Zzz Secret Dish", "easy", 1 }')  # in no list, but the character knows it
+        assert lua.eval(f'({mod}:SetGoal("Culinária", "150", "secret dish"))') is True
+        ok, why = lua.eval(f'{mod}:SetGoal("Culinária", "", "secret dish")')
+        assert (ok, why) == (False, "level")
+        # out of sight and not known: refused, but no name at all is always fine
+        lua.execute("STUB.vendor = {}")
+        ok, why = lua.eval(f'{mod}:SetGoal("Culinária", "180", "Vitamina Calcificada")')
+        assert (ok, why) == (False, "recipe")
+        assert lua.eval(f'({mod}:SetGoal("Culinária", "180", ""))') is True
+
+    @test
+    def profession_goal_takes_the_level_from_the_voidprof_recipe_list():
+        game = GOALS_GAME + """
+            STUB.spellNames[1249966] = "Vitamina Calcificada"
+        """
+        lua = boot(before=game.replace('"Cooking", 142, 150', '"Culinária", 142, 225'))
+        lua.execute("""SN.RecipeData.professions = {
+            { id = "alchemy", name = "Alchemy", recipes = {} },
+            { id = "cooking", name = "Cooking", recipes = {
+                { 2538, "Charred Wolf Meat", min = 1 },
+                { 1249966, "Calcified Smoothie", min = 180, yellow = 185 },
+            } },
+        }""")
+        mod = "SN.modules.goal"
+        # a Portuguese client: matched by the spell's name from the game, level from the table
+        assert lua.eval(f'({mod}:SetGoal("Culinária", "", "vitamina calc"))') is True
+        assert lua.eval(f"{mod}:GetSummary().goal") == 180
+        # the English name of the table works too
+        assert lua.eval(f'({mod}:SetGoal("Culinária", "", "Calcified"))') is True
+        # a typo is still refused
+        assert lua.eval(f'({mod}:SetGoal("Culinária", "", "Vitamina Calcificda"))') is False
+        # a profession with a name the table knows only searches its own recipes
+        assert lua.eval(f'({mod}:SetGoal("Alchemy", "", "Calcified"))') is False
+        assert lua.eval(f'({mod}:SetGoal("Cooking", "", "Calcified"))') is True
+        # broken data never raises
+        lua.execute("SN.RecipeData.professions = { 5, { name = 'Cooking' }, { name = 'Cooking', recipes = { 7, { 'x' } } } }")
+        assert lua.eval(f'({mod}:SetGoal("Cooking", "", "Calcified"))') is False
+        lua.execute("SN.RecipeData = nil")
+        assert lua.eval(f'({mod}:SetGoal("Cooking", "", "Calcified"))') is False, "no data at all: nothing is confirmed, nothing raises"
+
+    @test
+    def profession_goal_knows_the_recipes_without_any_other_addon():
+        lua = boot(before=GOALS_GAME.replace('"Cooking", 142, 150', '"Culinária", 142, 225') + """
+            STUB.spellNames[1249966] = "Vitamina Calcificada"
+        """)
+        mod = "SN.modules.goal"
+        assert lua.eval("VoidProf") is None, "VoidProf is not installed here"
+        # a recipe that needs more than 300 can be named but is not a valid goal
+        assert lua.eval(f'({mod}:SetGoal("Cooking", "", "Refined Scale of Onyxia"))') is False
+        assert lua.eval("#SN.RecipeData.professions") >= 8
+        assert lua.eval(f'({mod}:SetGoal("Culinária", "", "vitamina calcificada"))') is True
+        assert lua.eval(f"{mod}:GetSummary().goal") == 180
+        assert lua.eval(f'({mod}:SetGoal("Culinária", "", "Vitamina Calcificda"))') is False, "a typo is refused"
+
+    @test
+    def profession_goal_never_reads_voidprof_even_when_it_is_installed():
+        lua = boot(before=GOALS_GAME.replace('"Cooking", 142, 150', '"Culinária", 142, 225') + """
+            STUB.spellNames[1249966] = "Vitamina Calcificada"
+            VoidProf = { ProfessionData = { professions = { { id = "cooking", name = "Cooking", recipes = {
+                { 1249966, "Calcified Smoothie", min = 200 } } } } } }
+        """)
+        assert lua.eval('(SN.modules.goal:SetGoal("Culinária", "", "Calcified"))') is True
+        assert lua.eval("SN.modules.goal:GetSummary().goal") == 180, "the data of the addon, not the other addon's table"
+
+    @test
+    def recipe_data_file_has_the_third_party_notice_and_sane_rows():
+        notice = (ADDON_DIR / "THIRD_PARTY_NOTICES.md").read_text(encoding="utf-8")
+        assert "Copyright (c) 2026 Vede" in notice and "MIT License" in notice
+        lua = boot()
+        bad = lua.eval("""(function()
+            local n = 0
+            for _, p in ipairs(SN.RecipeData.professions) do
+                for _, r in ipairs(p.recipes) do
+                    if type(r[1]) ~= "number" or type(r[2]) ~= "string" or type(r.min) ~= "number" or r.min < 1 or r.min > 400 then n = n + 1 end
+                end
+            end
+            return n
+        end)()""")
+        assert bad == 0, f"{bad} malformed recipe rows"
+
+    @test
+    def profession_goal_range_follows_the_games_profession_data():
+        lua = boot()
+        lua.execute('SN.RecipeData.professions[#SN.RecipeData.professions + 1] = { id = "x", name = "Herbalism", max = 450, recipes = {} }')
+        mod = "SN.modules.goal"
+        assert tuple(lua.eval(f'{mod}:GetLevelRange("Cooking")')) == (1, 300), "from the built-in data of the game"
+        assert tuple(lua.eval(f'{mod}:GetLevelRange("Culinária")')) == (1, 300), "a profession no list names: the default"
+        assert tuple(lua.eval(f'{mod}:GetLevelRange("herbalism")')) == (1, 450), "the data's own top is followed"
+        assert lua.eval(f'({mod}:SetGoal("Herbalism", "400", ""))') is True
+        assert lua.eval(f'({mod}:SetGoal("Cooking", "400", ""))') is False
+
+    @test
+    def goal_plan_works_in_a_translated_client_by_skill_line_not_by_name():
+        lua = boot(before=GOALS_GAME + """
+            GetProfessions = function() return 1 end
+            GetProfessionInfo = function() return "Culinária", 0, 100, 300, 5, 0, 185 end
+            Auctionator = { API = { v1 = { GetAuctionPriceByItemID = function() return 10 end } } }
+        """)
+        mod = "SN.modules.goal"
+        lua.execute('SN:SetModuleEnabled("goal", true)')
+        lua.execute(f"{mod}:ReadKnownProfessions()")
+        assert lua.eval(f'{mod}:DataId("Culinária")') == "cooking"
+        assert tuple(lua.eval(f'{mod}:GetLevelRange("Culinária")')) == (1, 300)
+        assert lua.eval(f'({mod}:GetPlan("Culinária", 100, 150) ~= nil)') is True, "the plan exists although the name is Portuguese"
+        assert lua.eval(f'({mod}:GetPlan("Culinária", 100, 150).steps[1] ~= nil)') is True
+
+    @test
+    def goal_saved_data_moves_from_the_translated_name_to_the_id_and_survives_a_language_change():
+        lua = boot(before=GOALS_GAME + """
+            STUB.name = "Culinária"
+            GetProfessions = function() return 1 end
+            GetProfessionInfo = function() return STUB.name, 0, 100, 300, 5, 0, 185 end
+        """)
+        mod = "SN.modules.goal"
+        lua.execute('SN:SetModuleEnabled("goal", true)')
+        # data saved by the old version: keyed by the Portuguese name
+        lua.execute(f"""
+            local s = SN:GetModuleSettings("goal")
+            s.goals = {{ ["Culinária"] = {{ level = 150, label = "x" }} }}
+            s.seen = {{ ["Culinária"] = 300 }}
+            s.knownRecipes = {{ ["Culinária"] = {{ ["omelete"] = true }} }}
+            {mod}:ReadKnownProfessions()
+        """)
+        assert lua.eval('SN:GetModuleSettings("goal").goals["Culinária"]') is None, "the old key is gone"
+        assert lua.eval('SN:GetModuleSettings("goal").goals.cooking.level') == 150
+        assert lua.eval('SN:GetModuleSettings("goal").seen.cooking') == 300
+        assert lua.eval('SN:GetModuleSettings("goal").knownRecipes.cooking.omelete') is True
+        # the player switches the game to English: the same goal is found under the new name
+        lua.execute('STUB.name = "Cooking"')
+        lua.execute(f"{mod}:ReadKnownProfessions()")
+        assert lua.eval(f'{mod}:GetGoals()[{mod}:KeyOf("Cooking")].level') == 150
+        assert lua.eval(f'{mod}:NameOf("cooking")') == "Cooking"
+        assert lua.eval(f'({mod}:SetGoal("Cooking", 200, ""))') is True
+        assert lua.eval('SN:GetModuleSettings("goal").goals.cooking.level') == 200
+        # saving under the other name never makes a second goal
+        assert lua.eval('(function() local n = 0 for _ in pairs(SN:GetModuleSettings("goal").goals) do n = n + 1 end return n end)()') == 1
+
+    PLAN_GAME = GOALS_GAME + """
+        STUB.ah = { [100] = 10, [200] = 50, [999] = 100 }
+        Auctionator = { API = { v1 = { GetAuctionPriceByItemID = function(caller, id) return STUB.ah[id] end } } }
+        STUB.entry = { name = "Test", recipes = {
+            { 1, "Cheap Fish", min = 1, yellow = 45, grey = 85, ups = 1, mats = { { 1, 100 } } },
+            { 2, "Pricey Fish", min = 1, yellow = 45, grey = 85, ups = 1, mats = { { 1, 200 } } },
+            { 3, "Clam Dish", min = 30, yellow = 50, grey = 90, ups = 1, mats = { { 1, 300 } } },
+            { 4, "Book Dish", min = 60, yellow = 70, grey = 100, ups = 1, book = 999, mats = { { 1, 100 } } },
+        } }
+    """
+
+    def plan(lua, skill, goal, entry="STUB.entry", known="nil"):
+        return f"SN.GoalPlan.Build({entry}, {skill}, {goal}, {known})"
+
+    @test
+    def goal_plan_picks_the_recipe_with_the_lowest_price_per_point():
+        lua = boot(before=PLAN_GAME)
+        assert lua.eval(plan(lua, 1, 40) + ".steps[1].recipe[2]") == "Cheap Fish"
+        assert lua.eval(plan(lua, 1, 40) + ".total") == 390, "39 orange crafts at 10 copper"
+        assert lua.eval(plan(lua, 1, 40) + ".partial") is False
+        assert lua.eval(plan(lua, 40, 40)) is None, "already there: no plan"
+
+    @test
+    def goal_plan_never_prefers_an_item_with_no_price_and_says_so_when_it_must_use_one():
+        lua = boot(before=PLAN_GAME)
+        # a priced recipe can give the points: the clam dish (no price anywhere) is not used
+        assert lua.eval(plan(lua, 35, 50) + ".partial") is False
+        assert lua.eval("next(" + plan(lua, 35, 50) + ".unpriced)") is None
+        # only the clam dish can give points: used, and the plan is incomplete
+        only = "{ recipes = { STUB.entry.recipes[3] } }"
+        assert lua.eval(plan(lua, 35, 45, only) + ".partial") is True
+        assert lua.eval(plan(lua, 35, 45, only) + ".unpriced[300]") is True
+        # a vendor price the player saw makes it priced (the data's own price would say nothing about who sells it)
+        lua.execute("SN.GoalPlan.GetSeen = function() return { [300] = 7 } end")
+        assert lua.eval(plan(lua, 35, 45, only) + ".partial") is False
+        assert lua.eval("(SN.GoalPlan.PriceOf(300))") == 7
+        assert lua.eval("select(2, SN.GoalPlan.PriceOf(300))") == "vendor"
+
+    @test
+    def goal_plan_takes_the_cheaper_of_auction_and_vendor():
+        lua = boot(before=PLAN_GAME)
+        lua.execute("SN.GoalPlan.GetSeen = function() return { [100] = 4, [200] = 90 } end")
+        assert lua.eval("select(2, SN.GoalPlan.PriceOf(100))") == "vendor" and lua.eval("(SN.GoalPlan.PriceOf(100))") == 4
+        assert lua.eval("select(2, SN.GoalPlan.PriceOf(200))") == "auction" and lua.eval("(SN.GoalPlan.PriceOf(200))") == 50
+
+    @test
+    def goal_plan_buys_a_recipe_book_once_and_not_when_it_is_known():
+        lua = boot(before=PLAN_GAME)
+        assert lua.eval(plan(lua, 80, 95) + ".books[1].itemID") == 999
+        assert lua.eval("#" + plan(lua, 80, 95) + ".books") == 1, "paid once"
+        lua.execute("STUB.noPrice = true")
+        assert lua.eval("#" + plan(lua, 80, 95, "STUB.entry", "function() return true end") + ".books") == 0
+        lua.execute("STUB.ah[999] = nil")
+        assert lua.eval("#" + plan(lua, 80, 95) + ".books") == 0, "no price for the book: that recipe is not an option"
+
+    @test
+    def goal_plan_money_text():
+        lua = boot(before=PLAN_GAME)
+        assert lua.eval("SN.GoalPlan.Money(123456)") == "12g 34s"
+        assert lua.eval("SN.GoalPlan.Money(4567)") == "45s 67c"
+        assert lua.eval("SN.GoalPlan.Money(8)") == "8c"
+
+    @test
+    def goal_plan_reads_vendor_prices_from_voidgps_without_opening_any_vendor():
+        # the entry has the shape VoidGPS documents in its Recipes.lua: { item, name, buy = copper for qty, qty, vendors = { ... } }
+        lua = boot(before=PLAN_GAME + """
+            VoidGPS = { Goods = { Get = function(self, item)
+                if item == 2692 then
+                    return { item = 2692, name = "Hot Spices", buy = 40, qty = 1, vendors = {
+                        { name = "A", map = 1, limited = true }, { name = "B", map = 1, cost = { favor = 3 } },
+                        { name = "C", map = 1, limited = false } } }
+                elseif item == 10284 then
+                    return { item = 10284, name = "Simple Flour", buy = 200, qty = 5, vendors = { { name = "D", map = 1 } } }
+                elseif item == 777 then
+                    return { item = 777, name = "Only limited", buy = 10, qty = 1, vendors = { { name = "E", map = 1, limited = true } } }
+                end
+            end } }
+        """)
+        assert lua.eval("(SN.GoalPlan.PriceOf(2692))") == 40, "the first vendor with plain gold and unlimited stock"
+        assert lua.eval("select(2, SN.GoalPlan.PriceOf(2692))") == "vendor"
+        assert lua.eval("(SN.GoalPlan.PriceOf(10284))") == 40, "a price for 5 is divided into one"
+        assert lua.eval("(SN.GoalPlan.PriceOf(777))") is None, "limited stock only: not something to plan with"
+        assert lua.eval("(SN.GoalPlan.PriceOf(555))") is None, "no vendor sells it (clam meat): unknown, not guessed"
+        broken = boot(before=PLAN_GAME + "VoidGPS = { Goods = { Get = function() error('boom') end } }")
+        assert broken.eval("(SN.GoalPlan.PriceOf(2692))") is None, "a failing VoidGPS never breaks the plan"
+
+    @test
+    def merchant_prices_are_kept_only_for_unlimited_gold_stock_of_items_in_the_data():
+        lua = boot(before=GOALS_GAME + """
+            STUB.merchant = {
+                { link = "|cffffffff|Hitem:2692::::|h[Hot Spices]|h|r", price = 40, qty = 1, available = -1 },
+                { link = "|cffffffff|Hitem:5503::::|h[Clam Meat]|h|r", price = 130, qty = 2, available = -1 },
+                { link = "|cffffffff|Hitem:2678::::|h[Mild Spices]|h|r", price = 5, qty = 1, available = 3 },
+                { link = "|cffffffff|Hitem:1708::::|h[Sweet Nectar]|h|r", price = 9, qty = 1, available = -1, extended = true },
+                { link = "|cffffffff|Hitem:6948::::|h[Hearthstone]|h|r", price = 1, qty = 1, available = -1 },
+            }
+            GetMerchantNumItems = function() return #STUB.merchant end
+            GetMerchantItemLink = function(i) return STUB.merchant[i].link end
+            GetMerchantItemInfo = function(i) local m = STUB.merchant[i] return "x", "t", m.price, m.qty, m.available, true, true, m.extended end
+        """)
+        mod = "SN.modules.goal"
+        lua.execute('SN:SetModuleEnabled("goal", true)')
+        lua.execute(f'{mod}.listener.__scripts.OnEvent({mod}.listener, "MERCHANT_SHOW")')
+        assert lua.eval(f"{mod}:GetVendorSeen()[2692]") == 40
+        assert lua.eval(f"{mod}:GetVendorSeen()[5503]") == 65, "price of a stack divided by its size"
+        assert lua.eval(f"{mod}:GetVendorSeen()[2678]") is None, "limited stock is not a price to plan with"
+        assert lua.eval(f"{mod}:GetVendorSeen()[1708]") is None, "paid with something else than gold"
+        assert lua.eval(f"{mod}:GetVendorSeen()[6948]") is None, "not an item of the recipe data"
+
+    @test
+    def goal_plan_shows_in_the_box_and_in_the_chat_and_names_the_missing_prices():
+        lua = boot(before=GOALS_GAME.replace('"Cooking", 142, 150', '"Cooking", 142, 225'))
+        mod = "SN.modules.goal"
+        lua.execute(f'{mod}:SetGoal("Cooking", "", "Calcified Smoothie")')
+        text = lua.eval(f"{mod}.frame and {mod}.frame.text.__text or ''") or ""
+        lua.execute(f'{mod}:Update()')
+        assert "Cheapest way" in (lua.eval(f"{mod}.frame.text.__text") or ""), "the box carries the plan"
+        lua.execute(f'{mod}:HandleCommand("plan")')
+        printed = lua.eval('table.concat(STUB.printed, " | ")')
+        assert "price unknown" in printed, "with no auction addon and no vendor seen, prices are unknown, not invented"
+        assert "Install Auctionator" in printed
+
+    @test
+    def profession_goal_page_lists_the_professions_seen():
+        lua = boot(before=GOALS_GAME)
+        lua.execute('SN.modules.goal:SetGoal("Cooking", 180, "") SN.modules.goal:Update()')
+        assert lua.eval('SN.modules.goal:GetSeen().Cooking') == 150
+        open_every_page(lua)
+
+
 @test
 def exploration_markers_follow_the_direction_the_minimap_faces():
     lua = boot(before=EXPLORATION_GAME)

@@ -9,7 +9,7 @@ local KNOWN_NOOP = {
     "SetOrientation", "SetMinMaxValues", "SetValueStep", "SetThumbTexture", "SetVertexColor", "SetAutoFocus",
     "SetMultiLine", "SetTextInsets", "ClearFocus", "EnableMouseWheel", "SetScrollChild",
     "UpdateScrollChildRect", "SetColorTexture", "SetTexture", "SetAlpha", "RegisterEvent", "UnregisterEvent",
-    "SetFocus", "HighlightText", "SetValue", "SetVerticalScroll", "SetParent",
+    "SetFocus", "HighlightText", "SetValue", "SetVerticalScroll", "SetParent", "SetNumeric", "SetMaxLetters",
 }
 
 local KNOWN_NOOP_SET = {}
