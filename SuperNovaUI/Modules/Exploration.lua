@@ -12,8 +12,8 @@ local addonName, SN = ...
 
     The world map markers are small frames on the map's canvas. The minimap markers are placed from the distance to the
     player in yards (the zone's size in yards from C_Map.GetMapWorldSize and the minimap's radius in yards from
-    C_Minimap.GetViewRadius), turned by the player's facing when the minimap rotates. The minimap is looked at ten times a
-    second, and only while it has a marker to move.
+    C_Minimap.GetViewRadius), turned by the player's facing when the minimap rotates. The minimap is looked at on every frame, so the
+    markers move with it, and a look where nothing moved costs only a few comparisons.
 
     Shared by the Retail and the WoW Forever addons; only Data/Exploration.lua differs.
 ]]
@@ -28,7 +28,7 @@ local Exploration = {
 -- Media/Icons/Unexplored.tga: a small ring with a dot, next to the addon's own icon
 local ICON = (SN.config.icon:gsub("SuperNovaUI$", "Unexplored"))
 local WORLD_PIN_SIZE, MINIMAP_PIN_SIZE = 14, 10
-local MINIMAP_STEP = 0.1  -- seconds between two looks at the minimap
+local MINIMAP_STEP = 0     -- seconds between two looks at the minimap: every frame, so the markers move with it
 local CACHE_SECONDS = 3   -- how long a read of the explored pieces is reused (events clear it sooner)
 local MAP_EVENTS = { "MAP_EXPLORATION_UPDATED", "ZONE_CHANGED_NEW_AREA", "ZONE_CHANGED", "ZONE_CHANGED_INDOORS", "PLAYER_ENTERING_WORLD" }
 
@@ -217,6 +217,29 @@ end
 
 -- ---- Minimap -----------------------------------------------------------------------------------------------------
 
+-- The zone's size in yards does not change while you are in it: read it once per zone.
+local zoneSizes = {}
+
+local function GetZoneSize(mapID)
+    local cached = zoneSizes[mapID]
+
+    if cached then
+        return cached[1], cached[2]
+    end
+
+    if C_Map.GetMapWorldSize then
+        local ok, wide, high = pcall(C_Map.GetMapWorldSize, mapID)
+        wide, high = ok and Plain(wide), ok and Plain(high)
+
+        if wide and high and wide > 0 then
+            zoneSizes[mapID] = { wide, high }
+            return wide, high
+        end
+    end
+
+    return nil, nil
+end
+
 -- Radius of what the minimap shows, in yards.
 local function GetMinimapRadius()
     if C_Minimap and C_Minimap.GetViewRadius then
@@ -251,6 +274,7 @@ function Exploration:UpdateMinimap()
     local minimap = _G.Minimap
 
     if not self.running or not minimap or not self:GetSetting("minimap") or not minimap:IsVisible() then
+        self.last = nil
         HidePins(self.minimapPins)
         return
     end
@@ -260,20 +284,17 @@ function Exploration:UpdateMinimap()
     local radius = GetMinimapRadius()
 
     if not list or #list == 0 or not radius then
+        self.last = nil
         HidePins(self.minimapPins)
         return
     end
 
     local okPosition, position = pcall(C_Map.GetPlayerMapPosition, mapID, "player")
     local playerX, playerY = position and Plain(position.x), position and Plain(position.y)
-    local yardsWide, yardsHigh
-
-    if C_Map.GetMapWorldSize then
-        local okSize, wide, high = pcall(C_Map.GetMapWorldSize, mapID)
-        yardsWide, yardsHigh = okSize and Plain(wide), okSize and Plain(high)
-    end
+    local yardsWide, yardsHigh = GetZoneSize(mapID)
 
     if not (okPosition and playerX and playerY and yardsWide and yardsHigh and yardsWide > 0) then
+        self.last = nil
         HidePins(self.minimapPins)
         return
     end
@@ -282,6 +303,15 @@ function Exploration:UpdateMinimap()
     local square = IsSquareMinimap()
     local rotates = GetCVar and GetCVar("rotateMinimap") == "1"
     local facing = rotates and Plain(GetPlayerFacing and GetPlayerFacing()) or 0
+
+    -- nothing moved since the last look: the markers are already where they belong
+    local last = self.last
+
+    if last and last.map == mapID and last.x == playerX and last.y == playerY and last.facing == facing and last.radius == radius then
+        return
+    end
+
+    self.last = { map = mapID, x = playerX, y = playerY, facing = facing, radius = radius }
     local shown = 0
 
     for _, region in ipairs(list) do
@@ -325,6 +355,7 @@ function Exploration:UpdateTicker()
             self.ticker:SetScript("OnUpdate", nil)
         end
 
+        self.last = nil
         HidePins(self.minimapPins)
         return
     end
@@ -347,6 +378,7 @@ end
 -- ---- Life cycle --------------------------------------------------------------------------------------------------
 
 function Exploration:Refresh()
+    self.last = nil
     if self.running then
         self:HookWorldMap() -- the world map may only exist after the game has finished loading its own addons
     end

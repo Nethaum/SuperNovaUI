@@ -259,6 +259,46 @@ def exploration_marker_icon_exists_and_the_module_points_to_it():
     assert lua.eval('(SN.config.icon:gsub("SuperNovaUI$", "Unexplored"))').endswith("\\Icons\\Unexplored")
 
 
+CONVERGENCE_FILE = ADDON_DIR / "Modules" / "Forever" / "Convergence.lua"
+CONVERGENCE_GAME = """
+    C_Map = {
+        GetBestMapForUnit = function() return 1411 end,
+        GetPlayerMapPosition = function() return { x = 0.5, y = 0.5 } end,
+        GetMapInfo = function() return { name = "Durotar" } end,
+    }
+    UnitRace = function() return "Windshaper Skyborne", "Skyborne", STUB.raceID or 96 end
+"""
+
+if CONVERGENCE_FILE.exists():  # the Elemental Convergence markers exist only in the WoW Forever addon
+
+    @test
+    def convergence_markers_know_every_zone_and_start_on_only_for_a_windshaper():
+        lua = boot(before=CONVERGENCE_GAME)
+        assert lua.eval("#SN.ConvergenceData[1411]") == 4, "Durotar has two convergences, as two x,y pairs"
+        assert lua.eval("SN.ConvergenceData[1411][1]") == 0.451
+        assert lua.eval('SN:IsModuleEnabled("converge")') is True and lua.eval('SN:IsModuleActive("converge")') is True
+        points = lua.eval("(function() local n = 0 for _, list in pairs(SN.ConvergenceData) do n = n + #list / 2 end return n end)()")
+        assert points == 417, points
+        assert lua.eval("(function() local n = 0 for _ in pairs(SN.ConvergenceData) do n = n + 1 end return n end)()") == 41
+        other = boot(before=CONVERGENCE_GAME.replace("STUB.raceID or 96", "5"))
+        assert other.eval('SN:IsModuleEnabled("converge")') is False, "any other race has no use for it"
+        other.execute('SN:SetModuleEnabled("converge", true)')
+        assert other.eval('SN:IsModuleActive("converge")') is True, "the player can still turn it on"
+        assert boot().eval('SN:IsModuleEnabled("converge")') is False, "no map API: nothing to do"
+
+    @test
+    def convergence_points_are_inside_their_maps_and_the_icon_exists():
+        import struct
+        lua = boot(before=CONVERGENCE_GAME)
+        bad = lua.eval("(function() local n = 0 for _, list in pairs(SN.ConvergenceData) do for _, v in ipairs(list) do if v < 0 or v > 1 then n = n + 1 end end end return n end)()")
+        assert bad == 0
+        path = ADDON_DIR / "Media" / "Icons" / "Convergence.tga"
+        assert path.exists(), "the convergence icon is missing"
+        width, height, bits = struct.unpack("<HHB", path.read_bytes()[12:17])
+        assert (width, height, bits) == (32, 32, 32)
+        assert lua.eval('(SN.config.icon:gsub("SuperNovaUI$", "Convergence"))').endswith("\Icons\Convergence")
+
+
 @test
 def exploration_markers_follow_the_direction_the_minimap_faces():
     lua = boot(before=EXPLORATION_GAME)
