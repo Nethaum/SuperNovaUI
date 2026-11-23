@@ -118,6 +118,17 @@ local function NewPin(parent, size, interactive)
     local icon = pin:CreateTexture(nil, "OVERLAY")
     icon:SetAllPoints()
     icon:SetTexture(ICON)
+
+    -- the game snaps pictures to the screen's pixel grid; the minimap slides smoothly, so a snapped marker moves in
+    -- little jumps next to it. Markers keep their sub-pixel position instead.
+    if icon.SetSnapToPixelGrid then
+        icon:SetSnapToPixelGrid(false)
+    end
+
+    if icon.SetTexelSnappingBias then
+        icon:SetTexelSnappingBias(0)
+    end
+
     pin.icon = icon
 
     if interactive then
