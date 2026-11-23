@@ -5,7 +5,7 @@
 ## Notes-enUS: Modular UI tools for WoW Retail.
 ## Notes-ptBR: Interface modular para o WoW Retail.
 ## Author: Nethaum
-## Version: 0.1.10
+## Version: 0.1.11
 ## X-Curse-Project-ID: 1771235
 ## IconTexture: Interface\AddOns\SuperNovaUI\Media\Icons\SuperNovaUI
 ## Category-enUS: UI Overhaul
@@ -39,3 +39,9 @@ Modules\Rematch.lua
 Modules\CooldownMacro.lua
 Data\Exploration.lua
 Modules\Exploration.lua
+Modules\GoalStore.lua
+Modules\GoalGame.lua
+Modules\GoalRecipes.lua
+Modules\GoalPage.lua
+Modules\GoalReport.lua
+Modules\Goals.lua

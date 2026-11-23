@@ -15,7 +15,9 @@ SOURCE = ROOT / "SuperNovaUI"
 TARGET = ROOT.parent / "SuperNovaUI-Forever" / "SuperNovaUI_Forever"
 NOT_SHARED = {"Core/Config.lua"}
 SHARED_FOLDERS = ["Core", "Panel"]
-SHARED_MODULES = ["Modules/CooldownMacro.lua", "Modules/Exploration.lua"]  # modules that are the same file in both addons
+SHARED_MODULES = ["Modules/CooldownMacro.lua", "Modules/Exploration.lua"] + [
+    f"Modules/{name}.lua" for name in ("GoalStore", "GoalGame", "GoalRecipes", "GoalPage", "GoalReport", "Goals")
+]  # modules that are the same file in both addons
 
 
 def shared_files():

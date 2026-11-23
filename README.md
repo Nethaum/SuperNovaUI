@@ -34,6 +34,10 @@ Rematch 5.3.1 reads NPC names from a tooltip, and patch 12.1 made that text a "s
 
 Marks the regions of the current zone you have not discovered yet, on the world map and on the minimap, with a small ring that disappears when you discover the region. The regions come from the game's own tables (`python tools/gen-exploration.py` rebuilds `Data/Exploration.lua` after a patch); it does nothing next to Leatrix Maps unless you turn it on.
 
+### Profession goal
+
+A target level per profession (per expansion tier in Retail, saved as `cooking:2872`, never by translated name) and a box under the profession window with the points left and the recipe to make now. Shared with the Forever addon, split by job in `Modules/Goal*.lua` (`GoalStore` saved data, `GoalGame` what the game says, `GoalRecipes` recipe levels, `GoalPage` settings page, `GoalReport` summary and texts, `Goals` box, events, command, registration). The recipe data and the cheapest-path plan (`Data/Recipes.lua`, `Modules/Forever/GoalPlan.lua`) exist only in the Forever addon; here the module works without them.
+
 ### Macro by cooldown
 
 A macro cannot ask whether a spell is on cooldown; this module can. It watches one spell and keeps one macro in step with it: one text while the spell is ready, another while it recharges, and it switches back by itself when the spell is ready again. You keep a single button on the bar. Set it up in Tools > Macro by cooldown: the spell (name or id), the macro name (created for the character if it does not exist; an existing macro with that name has its text replaced) and the two texts. The page has a **Fill with the druid example** button for WoW Forever: the racial "Sky Vision" while it is ready; on cooldown, shift into Cat Form and use Dash.

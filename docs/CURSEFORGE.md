@@ -83,6 +83,15 @@ Marks, on the world map and on the minimap, the regions of the zone you are in t
 - `/snui explore` lists in the chat the regions of the current zone that are still to discover.
 - Also available in the WoW Forever version of SuperNovaUI, with that game's own zones.
 
+### 7. Profession goal (module)
+
+Set the level you want to reach in a profession and, with its window open, a box under it says how many points are left and which recipe to make now (the best colour your bags can pay for). It starts off until you set a goal.
+
+- Set it in **Tools > Profession goal**. Each expansion's level of a profession (for example Khaz Algar Cooking) has its own goal; it shows in the page after you open its window once. The target is a number, or only the name of a recipe that is in a vendor window or in your bags, and the level it needs is found for you.
+- `/snui goal` says how far the goal of the open profession is.
+- It works in any game language: goals are saved by the game's own ids, not by translated names.
+- The cheapest-way plan with prices exists only in the WoW Forever version for now.
+
 ---
 
 ## Commands
@@ -94,6 +103,7 @@ Marks, on the world map and on the minimap, the regions of the zone you are in t
 | `/snui status` | State of every SuperNovaUI module |
 | `/snui macro` | Open the Macro by cooldown page |
 | `/snui explore` | List the regions of this zone you have not discovered yet |
+| `/snui goal` | How far the goal of the open profession is |
 | `/snui compat` | Open the compatibility menu |
 | `/snui compat status` | Print the compatibility state in the chat |
 | `/snui pgf` | State of the Premade Groups Filter tweak |
@@ -229,6 +239,15 @@ Marca, no mapa-múndi e no minimapa, as regiões da zona em que você está que 
 - `/snui explore` lista no chat as regiões da zona atual que ainda faltam descobrir.
 - Também existe na versão WoW Forever do SuperNovaUI, com as zonas daquele jogo.
 
+### 7. Meta de profissão (módulo)
+
+Defina o nível que você quer alcançar em uma profissão e, com a janela dela aberta, uma caixa embaixo diz quantos pontos faltam e qual receita fazer agora (a melhor cor que as suas bolsas conseguem pagar). Ele começa desligado até você definir uma meta.
+
+- Defina em **Tools > Profession goal**. Cada nível de expansão de uma profissão (por exemplo Culinária de Khaz Algar) tem a sua meta; ele aparece na página depois que você abre a janela dele uma vez. A meta é um número, ou só o nome de uma receita que esteja na janela de um vendedor ou nas suas bolsas, e o nível que ela exige é descoberto para você.
+- `/snui goal` diz o quanto falta da meta da profissão aberta.
+- Funciona em qualquer idioma do jogo: as metas são guardadas pelos ids do próprio jogo, não por nomes traduzidos.
+- O plano do caminho mais barato, com preços, existe por enquanto só na versão WoW Forever.
+
 ---
 
 ## Comandos
@@ -240,6 +259,7 @@ Marca, no mapa-múndi e no minimapa, as regiões da zona em que você está que 
 | `/snui status` | Estado de cada módulo do SuperNovaUI |
 | `/snui macro` | Abre a página da Macro por recarga |
 | `/snui explore` | Lista as regiões desta zona que você ainda não descobriu |
+| `/snui goal` | O quanto falta da meta da profissão aberta |
 | `/snui compat` | Abre o menu de compatibilidade |
 | `/snui compat status` | Imprime o estado da compatibilidade no chat |
 | `/snui pgf` | Estado do ajuste do Premade Groups Filter |

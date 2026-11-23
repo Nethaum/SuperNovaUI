@@ -23,6 +23,8 @@ else:
     ADDON_DIR = ROOT / "SuperNovaUI"
 
 TOC = ADDON_DIR / f"{ADDON_DIR.name}.toc"
+HAS_RECIPE_DATA = (ADDON_DIR / "Data" / "Recipes.lua").exists()  # only the WoW Forever addon has the recipe data
+FOREVER_BUILD = 16001
 ADDON_NAME = ADDON_DIR.name
 # the saved variable of the addon under test (the Forever addon has its own); tests write "SuperNovaUIDB" and it is renamed
 DB_NAME = re.search(r'database = "(\w+)"', (ADDON_DIR / "Core" / "Config.lua").read_text(encoding="utf-8")).group(1)
@@ -43,6 +45,7 @@ def boot(installed=(), locale="enUS", saved=None, login=True, toc_version=None, 
     lua.execute(STUB.read_text(encoding="utf-8"))
     g = lua.globals()
     g.STUB.locale = locale
+    toc_version = toc_version or (FOREVER_BUILD if HAS_RECIPE_DATA else None)
     if toc_version:
         g.STUB.tocVersion = toc_version
     for addon in installed:
@@ -314,7 +317,7 @@ if CONVERGENCE_FILE.exists():  # the Elemental Convergence markers exist only in
         assert broken.eval(f"#{mod}:GetPoints(1411)") == 4, "a failing partner never breaks the module"
 
 
-GOALS_FILE = ADDON_DIR / "Modules" / "Forever" / "Goals.lua"
+GOALS_FILE = ADDON_DIR / "Modules" / "Goals.lua"
 GOALS_GAME = """
     TradeSkillFrame = CreateFrame("Frame", "TradeSkillFrame")
     STUB.profession = { "Cooking", 142, 150 }
@@ -331,7 +334,72 @@ GOALS_GAME = """
     GetTradeSkillInfo = function(i) return unpack(STUB.recipes[i]) end
 """
 
-if GOALS_FILE.exists():  # the profession goal exists only in the WoW Forever addon
+# The profession goal in Retail: one tier of each profession per expansion, no recipe data, no plan.
+RETAIL_GOAL_GAME = """
+    ProfessionsFrame = CreateFrame("Frame", "ProfessionsFrame")
+    STUB.tier = { professionName = "Khaz Algar Cooking", skillLevel = 40, maxSkillLevel = 100, professionID = 2872, parentProfessionID = 185 }
+    STUB.recipeInfo = {
+        [11] = { name = "Hearty Soup", learned = true, relativeDifficulty = "optimal", numAvailable = 2 },
+        [12] = { name = "Plain Bread", learned = true, relativeDifficulty = "easy", numAvailable = 9 },
+    }
+    C_TradeSkillUI = {
+        GetBaseProfessionInfo = function() return STUB.tier end,
+        GetAllRecipeIDs = function() return { 11, 12 } end,
+        GetRecipeInfo = function(id) return STUB.recipeInfo[id] end,
+    }
+"""
+
+if GOALS_FILE.exists() and not HAS_RECIPE_DATA:
+
+    @test
+    def retail_goal_is_kept_per_tier_of_the_profession_and_survives_a_language_change():
+        lua = boot(before=RETAIL_GOAL_GAME)
+        mod = "SN.modules.goal"
+        assert lua.eval(f'{mod}:SetGoal("Khaz Algar Cooking", "80", "")') is True
+        assert lua.eval(f"{mod}:GetSummary().missing") == 40
+        assert lua.eval(f"{mod}:GetSummary().recipe") == "Hearty Soup"
+        assert lua.eval(f"{mod}:GetGoals()['cooking:2872'].level") == 80, "saved under the id and the tier, not the name"
+        lua.execute('STUB.tier = { professionName = "Culinária de Khaz Algar", skillLevel = 40, maxSkillLevel = 100, professionID = 2872, parentProfessionID = 185 }')
+        assert lua.eval(f"{mod}:GetSummary().goal") == 80, "the same tier in another language keeps its goal"
+
+    @test
+    def retail_goal_tiers_of_one_profession_have_their_own_goals_and_tops():
+        lua = boot(before=RETAIL_GOAL_GAME)
+        mod = "SN.modules.goal"
+        lua.execute(f'{mod}:SetGoal("Khaz Algar Cooking", "80", "")')
+        lua.execute('STUB.tier = { professionName = "Dragon Isles Cooking", skillLevel = 25, maxSkillLevel = 50, professionID = 2873, parentProfessionID = 185 }')
+        lua.execute(f"{mod}:Update()")  # the window opening: the tier and its top are remembered
+        assert lua.eval(f"{mod}:GetSummary().goal") is None, "another tier has no goal yet"
+        assert lua.eval(f'({mod}:SetGoal("Dragon Isles Cooking", "80", ""))') is False, "above the top of this tier"
+        assert lua.eval(f'({mod}:SetGoal("Dragon Isles Cooking", "50", ""))') is True
+        assert lua.eval(f"{mod}:GetGoals()['cooking:2872'].level") == 80
+        assert lua.eval(f"{mod}:GetGoals()['cooking:2873'].level") == 50
+
+    @test
+    def retail_goal_without_recipe_data_has_no_plan_and_never_raises():
+        lua = boot(before=RETAIL_GOAL_GAME)
+        mod = "SN.modules.goal"
+        assert lua.eval("SN.GoalPlan") is None and lua.eval("SN.RecipeData") is None
+        lua.execute(f'{mod}:SetGoal("Khaz Algar Cooking", "80", "")')
+        assert lua.eval(f"{mod}:GetSummary().plan") is None
+        lua.execute(f'{mod}:HandleCommand("plan")')
+        lua.execute(f'{mod}:HandleCommand("plan")')  # prints that the plan does not exist here; must not raise
+        assert lua.eval(f'({mod}:SetGoal("Khaz Algar Cooking", "", "Nothing like this"))') is False, "an unknown recipe is not confirmed"
+        assert lua.eval(f'({mod}:SetGoal("Khaz Algar Cooking", "", "Hearty"))') is False, "a known recipe has no level to give"
+
+    @test
+    def retail_goal_page_lists_the_tiers_seen_and_not_the_base_professions():
+        lua = boot(before=RETAIL_GOAL_GAME + """
+            GetProfessions = function() return 1 end
+            GetProfessionInfo = function() return "Cooking", 0, 10, 100, 0, 0, 185 end
+        """)
+        lua.execute('SN:SetModuleEnabled("goal", true) SN:OpenPanel("general") SN:SelectModule("goal")')
+        assert lua.eval('STUB.findButton("Save goal - Cooking")') is None, "the base profession is not a tier to set a goal for"
+        lua.execute("SN.modules.goal:Update()")
+        lua.execute('SN:OpenPanel("general") SN:SelectModule("goal")')
+        assert lua.eval('STUB.findButton("Save goal - Khaz Algar Cooking")') is not None, "an opened tier shows up"
+
+if GOALS_FILE.exists() and HAS_RECIPE_DATA:  # the goal with the recipe data and the plan: the WoW Forever addon
 
     @test
     def profession_goal_names_the_recipe_to_make_and_how_far_the_goal_is():
