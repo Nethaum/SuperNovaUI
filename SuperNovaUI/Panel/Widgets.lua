@@ -465,10 +465,6 @@ function W.NewFlow(parent, width)
         return row
     end
 
-    function flow:OnRefresh(callback)
-        table.insert(self.refreshers, callback)
-    end
-
     function flow:Refresh()
         for _, callback in ipairs(self.refreshers) do
             callback()

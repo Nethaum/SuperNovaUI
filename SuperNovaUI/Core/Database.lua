@@ -64,11 +64,3 @@ function SN:GetModuleSettings(moduleName)
 
     return self.db.modules[moduleName]
 end
-
-function SN:GetCharacterModuleSettings(moduleName)
-    if not self.charDB or not self.charDB.modules then
-        return nil
-    end
-
-    return self.charDB.modules[moduleName]
-end

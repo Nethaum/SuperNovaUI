@@ -305,19 +305,6 @@ function SN:GetToggleableModules()
     return list
 end
 
--- Modules that work with what the player has installed.
-function SN:GetCompatibleModules()
-    local list = {}
-
-    for _, moduleName in ipairs(self:GetToggleableModules()) do
-        if self:IsModuleAvailable(moduleName) then
-            table.insert(list, moduleName)
-        end
-    end
-
-    return list
-end
-
 function SN:SetAllEnabled(enabled)
     for _, moduleName in ipairs(self:GetToggleableModules()) do
         self:SetModuleEnabled(moduleName, enabled)

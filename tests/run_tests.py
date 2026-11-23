@@ -117,7 +117,7 @@ def modules_start_only_when_their_addon_is_installed():
 @test
 def no_welcome_question_when_nothing_is_compatible():
     lua = boot(installed=[])
-    if lua.eval("#SN:GetCompatibleModules()") == 0:
+    if lua.eval("(function() local n = 0 for _, m in ipairs(SN:GetToggleableModules()) do if SN:IsModuleAvailable(m) then n = n + 1 end end return n end)()") == 0:
         assert lua.eval("SN.welcome") is None
         assert lua.eval("SN.db.firstRunDone") is False
 
@@ -297,6 +297,21 @@ if CONVERGENCE_FILE.exists():  # the Elemental Convergence markers exist only in
         width, height, bits = struct.unpack("<HHB", path.read_bytes()[12:17])
         assert (width, height, bits) == (32, 32, 32)
         assert lua.eval('(SN.config.icon:gsub("SuperNovaUI$", "Convergence"))').endswith("\Icons\Convergence")
+
+    @test
+    def convergence_markers_use_the_partner_addons_list_when_it_is_installed():
+        mod = "SN.modules.converge"
+        own = boot(before=CONVERGENCE_GAME)
+        assert own.eval(f"#{mod}:GetPoints(1411)") == 4, "without the partner, our own list"
+        partner = boot(before=CONVERGENCE_GAME + """
+            SLLCM_GetNodes = function(faction) STUB.askedFaction = faction return { [1411] = { { 0.1, 0.2 }, { 0.3, 0.4 }, { 0.5, 0.6 } } } end
+        """)
+        assert partner.eval(f"#{mod}:GetPoints(1411)") == 6, "the partner's three points, as a flat list"
+        assert partner.eval(f"{mod}:GetPoints(1411)[3]") == 0.3
+        assert partner.eval("STUB.askedFaction") == "Horde"
+        assert partner.eval(f"#{mod}:GetPoints(1412)") == own.eval(f"#{mod}:GetPoints(1412)"), "a zone it lacks keeps ours"
+        broken = boot(before=CONVERGENCE_GAME + "SLLCM_GetNodes = function() error('boom') end")
+        assert broken.eval(f"#{mod}:GetPoints(1411)") == 4, "a failing partner never breaks the module"
 
 
 @test

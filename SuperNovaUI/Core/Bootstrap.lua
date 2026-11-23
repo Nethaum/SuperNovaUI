@@ -1,6 +1,5 @@
 local addonName, SN = ...
 
-SN.addonName = addonName
 SN.modules = SN.modules or {}
 SN.moduleOrder = SN.moduleOrder or {}
 SN.activeModules = SN.activeModules or {}
